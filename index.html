@@ -71,6 +71,27 @@ button:active{transform:scale(.97);}
 button.danger{background:var(--coin-red);}
 button.secondary{background:#8A84A8;}
 
+/*calendar-nav*/
+.calendar-nav-icon {
+    width: 20px;
+    height: 20px;
+    margin: 0 auto 2px;
+    border-radius: 4px;
+    background: #fff;
+    border: 2px solid #4FA6E8;
+    border-top: 6px solid #4FA6E8;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+.calendar-nav-icon span {
+    font-size: 9px;
+    font-weight: 700;
+    color: #241C3D;
+    line-height: 1;
+}
 /* Calendar */
 .calendar-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px;text-align:center;}
 .calendar-header{font-weight:bold;color:var(--ink-soft2);padding:5px 0;font-size:12px;}
@@ -299,8 +320,13 @@ button.secondary{background:#8A84A8;}
     <div id="sheet-content"></div>
 </div>
 
-<div class="bottom-nav">
-    <div class="nav-item active" onclick="switchTab('calendar',this)"><div>📅</div>달력</div>
+	<div class="bottom-nav">
+		<div class="nav-item active" onclick="switchTab('calendar', this)">
+		<div class="calendar-nav-icon">
+			<span id="calendar-nav-day"></span>
+		</div>
+		달력
+	</div>
     <div class="nav-item" onclick="switchTab('ledger',this)"><div>🎫</div>뽑기기록</div>
     <div class="nav-item" onclick="switchTab('plant',this)"><div>🧸</div>컬렉션</div>
     <div class="nav-item" onclick="switchTab('stats',this)"><div>🧮</div>통계</div>
@@ -661,6 +687,7 @@ function renderAll(){
 function initApp(){
     loadState();
     renderAll();
+	document.getElementById('calendar-nav-day').textContent = new Date().getDate();
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initApp);else initApp();
 </script>
