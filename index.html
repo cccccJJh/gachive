@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#1B2545">
-<title>캡슐토이 다이어리 · 와이어프레임</title>
+<title>캡슐토이 다이어리</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Jua&family=Pretendard+Std:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
@@ -47,8 +47,6 @@
     header .title{font-family:'Jua',sans-serif; font-size:20px; letter-spacing:0.02em; display:flex; align-items:center; justify-content:center; gap:6px;}
     .coin-slot{ width:64px; height:8px; margin:8px auto 0; background:var(--navy-soft); border-radius:6px; position:relative; }
     .coin-slot::after{ content:""; position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:34px; height:4px; background:#151b33; border-radius:3px; }
-
-    .mock-banner{ background:#2E2A54; color:#D9D2F5; font-size:11px; text-align:center; padding:6px 10px; letter-spacing:0.02em; }
 
     .tab-content{display:none; padding:15px; animation:fadeIn 0.25s;}
     .tab-content.active{display:block;}
@@ -128,7 +126,6 @@
     .form-actions{display:flex; gap:8px; margin-top:12px;}
     .form-actions button{flex:1;}
 
-    /* 접이식 등록 카드 */
     .accordion-header{cursor:pointer; user-select:none;}
     .accordion-header .chevron{transition:transform .2s ease; font-size:13px; color:var(--ink-soft2);}
     .accordion-header.open .chevron{transform:rotate(180deg);}
@@ -143,7 +140,6 @@
     <div class="title">🎁 캡슐토이 다이어리</div>
     <div class="coin-slot"></div>
 </header>
-<div class="mock-banner">🖼️ 와이어프레임 미리보기 · 목데이터이며 저장되지 않습니다</div>
 
 <!-- 1. 달력 -->
 <div id="tab-calendar" class="tab-content active">
@@ -280,7 +276,7 @@
 
     <div class="card">
         <div class="flex-between" style="margin-bottom:10px;">
-            <h4 style="margin:0;">컬렉션 검색 🎴</h4>
+            <h4 style="margin:0;">컬렉션 검색 🦄</h4>
             <button onclick="resetCollectionFilter()" style="padding:4px 10px; font-size:11px; background:#8A84A8; border-radius:8px;">초기화</button>
         </div>
         <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:15px;">
@@ -303,9 +299,9 @@
 
     <div id="sub-stats-ledger" class="sub-content active">
         <div class="card" style="display:flex; flex-direction:column; gap:8px; margin-bottom:14px;">
-            <div class="stat-pill"><span>🎟️ 이번달 뽑기 횟수(추정)</span><span class="num">15회</span></div>
-            <div class="stat-pill"><span>💸 뽑기당 평균 지출</span><span class="num">4,333원</span></div>
-            <div class="stat-pill"><span>🎁 시크릿 당첨률</span><span class="num">33%</span></div>
+            <div class="stat-pill"><span>🎟️ 이번달 뽑기 횟수(추정)</span><span class="num" id="stat-pull-count">0회</span></div>
+            <div class="stat-pill"><span>💸 뽑기당 평균 지출</span><span class="num" id="stat-avg-spend">0원</span></div>
+            <div class="stat-pill"><span>🎁 시크릿 당첨률</span><span class="num" id="stat-secret-rate">0%</span></div>
         </div>
         <div class="card">
             <h4 style="margin:0 0 10px 0;">시리즈별 지출 비율</h4>
@@ -349,13 +345,13 @@
         <div class="card">
             <h4>데이터 내보내기 / 가져오기</h4>
             <p style="font-size:12px; color:var(--ink-soft2); line-height:1.4;">스마트폰을 바꾸거나 데이터를 안전하게 보관할 때 사용하세요.</p>
-            <button style="background:var(--sr); margin-bottom:10px; width:100%;" onclick="mockAlert()">현재 데이터 백업 파일 다운로드</button>
-            <input type="file" style="padding:5px; width:100%; margin:0;">
+            <button style="background:var(--sr); margin-bottom:10px; width:100%;" onclick="exportData()">현재 데이터 백업 파일 다운로드</button>
+            <input type="file" id="import-file-input" accept="application/json" style="padding:5px; width:100%; margin:0;" onchange="importData(event)">
         </div>
         <div class="card" style="border:2px solid var(--coin-red);">
             <h4 style="color:var(--coin-red); margin:0 0 5px 0;">⚠️ 위험 구역: 데이터 초기화</h4>
             <p style="font-size:12px; color:var(--ink-soft2); margin-bottom:10px;">모든 컬렉션 및 뽑기 내역이 영구적으로 삭제됩니다.</p>
-            <button class="danger" style="width:100%;" onclick="mockAlert()">전체 데이터 초기화 (전부 삭제)</button>
+            <button class="danger" style="width:100%;" onclick="resetAllData()">전체 데이터 초기화 (전부 삭제)</button>
         </div>
     </div>
 
@@ -378,16 +374,25 @@
 
 <!-- 하단 네비게이션 -->
 <div class="bottom-nav">
+
     <div class="nav-item active" onclick="switchTab('calendar', this)"><div>📅</div>달력</div>
-    <div class="nav-item" onclick="switchTab('ledger', this)"><div>🧾</div>뽑기기록</div>
+
+    <div class="nav-item" onclick="switchTab('ledger', this)"><div>🎫</div>뽑기기록</div>
+
     <div class="nav-item" onclick="switchTab('plant', this)"><div>🧸</div>컬렉션</div>
-    <div class="nav-item" onclick="switchTab('stats', this)"><div>📊</div>통계</div>
+
+    <div class="nav-item" onclick="switchTab('stats', this)"><div>🧮</div>통계</div>
+
     <div class="nav-item" onclick="switchTab('settings', this)"><div>⚙️</div>설정</div>
+
 </div>
 
 <script>
-// ------ 목데이터: 컬렉션이 원본 데이터 ------
-let mockItems = [
+// ------ 로컬 저장소 키 ------
+const STORAGE_KEY = 'capsule-toy-diary-v1';
+
+// ------ 최초 실행시에만 쓰이는 기본 시드 데이터 (이후에는 로컬 저장소 값을 사용) ------
+const SEED_ITEMS = [
     {id:1, name:'고양이 미니어처', series:'미니어처 소품', rarity:'시크릿', status:'held', condition:4, acquired:'2026-08-02', method:'시크릿 당첨', purchasePrice:15000, location:'홍대 가챠샵', fav:true, soldDate:'', salePrice:0, note:'시크릿 노리고 여러 번 돌려서 뽑은 아이템. 포장 상태 양호.'},
     {id:2, name:'강아지 피규어', series:'동물 피규어', rarity:'레어', status:'held', condition:3, acquired:'2026-07-15', method:'뽑기 성공', purchasePrice:5000, location:'강남 가챠샵', fav:false, soldDate:'', salePrice:0, note:'중복 없이 한 번에 획득.'},
     {id:3, name:'이벤트 증정 키링', series:'캐릭터 키링', rarity:'레귤러', status:'sold', condition:2, acquired:'2026-05-01', method:'이벤트 무료', purchasePrice:0, location:'이벤트 행사장', fav:false, soldDate:'2026-08-03', salePrice:5000, note:'이벤트 증정품. 보관만 하다가 판매 완료.'},
@@ -396,13 +401,44 @@ let mockItems = [
     {id:6, name:'판다 시크릿', series:'동물 피규어', rarity:'시크릿', status:'sold', condition:1, acquired:'2026-06-20', method:'시크릿 당첨', purchasePrice:10000, location:'홍대 가챠샵', fav:false, soldDate:'2026-08-10', salePrice:8000, note:'도색 상태가 아쉬워서 판매.'},
     {id:7, name:'캐릭터 키링 A', series:'캐릭터 키링', rarity:'레귤러', status:'held', condition:4, acquired:'2026-08-12', method:'뽑기 성공', purchasePrice:15000, location:'홍대 가챠샵', fav:false, soldDate:'', salePrice:0, note:'키링용으로 보유 중.'}
 ];
+const SEED_SERIES = ['동물 피규어','미니어처 소품','캐릭터 키링','빵 스트랩'];
+const DEFAULT_TITLE = '캡슐토이 다이어리';
 
-let managedSeries = ['동물 피규어','미니어처 소품','캐릭터 키링','빵 스트랩'];
+let mockItems = [];
+let managedSeries = [];
 
 const conditionLabels = {4:'최상', 3:'좋음', 2:'보통', 1:'나쁨'};
 const rarityStyle = {'레귤러':'n', '레어':'sr', '시크릿':'ssr'};
 let currentDate = new Date(2026, 7, 1);
 let expensePieChart = null;
+
+// ------ 저장 / 불러오기 (localStorage) ------
+function saveState(){
+    try{
+        const titleText = document.querySelector('header .title').textContent.replace(/^🎁\s*/, '').trim();
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({ mockItems, managedSeries, appTitle: titleText }));
+    }catch(e){
+        console.warn('저장 실패 (이 브라우저에서는 localStorage를 사용할 수 없는 것 같습니다):', e);
+    }
+}
+
+function loadState(){
+    try{
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if(raw){
+            const data = JSON.parse(raw);
+            mockItems = Array.isArray(data.mockItems) ? data.mockItems : SEED_ITEMS.slice();
+            managedSeries = Array.isArray(data.managedSeries) ? data.managedSeries : SEED_SERIES.slice();
+            const title = data.appTitle || DEFAULT_TITLE;
+            document.querySelector('header .title').innerHTML = `🎁 ${escapeHtml(title)}`;
+            return;
+        }
+    }catch(e){
+        console.warn('불러오기 실패, 기본 데이터로 시작합니다:', e);
+    }
+    mockItems = SEED_ITEMS.slice();
+    managedSeries = SEED_SERIES.slice();
+}
 
 function statusLabel(status){ return status==='sold' ? '💰 판매완료' : '🌟 보유중'; }
 function renderConditionStars(n){ return '⭐'.repeat(Number(n)) + '☆'.repeat(4-Number(n)) + ' ' + conditionLabels[n]; }
@@ -416,6 +452,23 @@ function toggleNewItemForm(){
     header.classList.toggle('open', opening);
     body.classList.toggle('open', opening);
     if(opening) document.getElementById('new-name')?.focus();
+}
+
+function goToAddItem(dateStr){
+    closeSheet();
+    document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+    document.getElementById('tab-plant').classList.add('active');
+    document.querySelectorAll('.bottom-nav .nav-item')[2].classList.add('active');
+
+    const body=document.getElementById('new-item-accordion-body');
+    if(!body.classList.contains('open')) toggleNewItemForm();
+    if(dateStr){
+        const dateInput=document.getElementById('new-acquired');
+        if(dateInput) dateInput.value=dateStr;
+    }
+    window.scrollTo({top:0, behavior:'smooth'});
+    setTimeout(()=>document.getElementById('new-name')?.focus(), 300);
 }
 
 // 컬렉션 데이터를 지출/수입 내역으로 변환
@@ -456,7 +509,7 @@ function renderCalendar(){
     document.getElementById('calendar-month-title').innerText=`${year}년 ${month+1}월`;
     const firstDay=new Date(year,month,1).getDay();
     const lastDate=new Date(year,month+1,0).getDate();
-    const todayStr='2026-08-12';
+    const todayStr=new Date().toISOString().substring(0,10);
     const tx=getTransactions();
     let html='';
     for(let i=0;i<firstDay;i++) html+='<div class="calendar-day empty"></div>';
@@ -483,6 +536,7 @@ function openDateSheet(dateStr){
     });
     if(!dayTx.length) html+='<p style="color:#9089AC; text-align:center; padding:20px 0;">기록된 내역이 없습니다.</p>';
     html+='</ul>';
+    html+=`<button onclick="goToAddItem('${dateStr}')" style="width:100%; margin-top:14px;">+ 이 날짜로 아이템 추가</button>`;
     openSheet(html);
 }
 
@@ -598,12 +652,14 @@ function saveCollectionItem(id){
     p.fav=document.getElementById('edit-fav').checked;
     p.soldDate=p.status==='sold'?document.getElementById('edit-sold-date').value:'';
     p.salePrice=p.status==='sold'?Number(document.getElementById('edit-sale-price').value||0):0;
+    saveState();
     closeSheet(); renderAll();
 }
 
 function deleteCollectionItem(id){
     if(!confirm('이 아이템을 삭제할까요?')) return;
     mockItems=mockItems.filter(x=>x.id!==id);
+    saveState();
     closeSheet(); renderAll();
 }
 
@@ -620,7 +676,9 @@ function addCollectionItem(){
     });
     ['new-name','new-method','new-purchase-price','new-location','new-note','new-sold-date','new-sale-price'].forEach(id=>document.getElementById(id).value='');
     document.getElementById('new-status').value='held'; document.getElementById('new-fav').checked=false; toggleNewSaleFields();
-    renderAll(); alert('목데이터에 등록되었습니다. 새로고침하면 초기화됩니다.');
+    saveState();
+    renderAll();
+    toggleNewItemForm();
 }
 
 function renderStats(){
@@ -631,6 +689,14 @@ function renderStats(){
         if(expensePieChart) expensePieChart.destroy();
         expensePieChart=new Chart(canvas.getContext('2d'), {type:'pie', data:{labels:Object.keys(expByCat), datasets:[{data:Object.values(expByCat), backgroundColor:['#FF4F64','#4FA6E8','#FFB627','#A67AE0','#22C3A6','#8A84A8']}]}});
     }
+
+    const totalPulls = mockItems.length;
+    const totalSpend = mockItems.reduce((s,p)=>s+Number(p.purchasePrice||0),0);
+    const secretCount = mockItems.filter(p=>p.rarity==='시크릿').length;
+    document.getElementById('stat-pull-count').innerText = totalPulls+'회';
+    document.getElementById('stat-avg-spend').innerText = won(totalPulls ? Math.round(totalSpend/totalPulls) : 0);
+    document.getElementById('stat-secret-rate').innerText = (totalPulls ? Math.round(secretCount/totalPulls*100) : 0)+'%';
+
     const rarities=['레귤러','레어','시크릿']; const counts={}; rarities.forEach(r=>counts[r]=0); mockItems.forEach(p=>counts[p.rarity]++);
     const total=mockItems.length||1; const colorMap={'레귤러':'var(--n)','레어':'var(--sr)','시크릿':'var(--ssr)'};
     document.getElementById('rarity-bars').innerHTML=rarities.map(r=>{const pct=Math.round(counts[r]/total*100); return `<div><div class="flex-between" style="font-size:12px; margin-bottom:4px;"><span style="display:flex; align-items:center; gap:6px;"><span class="capsule ${rarityStyle[r]}"></span>${r}</span><span class="mono">${counts[r]}개 (${pct}%)</span></div><div style="background:#EEEAF8; border-radius:8px; height:8px; overflow:hidden;"><div style="width:${pct}%; height:100%; background:${colorMap[r]};"></div></div></div>`;}).join('');
@@ -671,6 +737,7 @@ function addSeries(){
     if(managedSeries.includes(name)){ alert('이미 등록된 시리즈입니다.'); return; }
     managedSeries.push(name);
     input.value='';
+    saveState();
     renderSeriesControls();
     renderSeriesManager();
 }
@@ -683,18 +750,70 @@ function deleteSeries(index){
         return;
     }
     managedSeries.splice(index,1);
+    saveState();
     renderSeriesControls();
     renderSeriesManager();
 }
 
 function changeAppTitle(){
-    const title=document.getElementById('app-title-input').value;
-    if(title){ document.querySelector('header .title').innerHTML=`🎁 ${escapeHtml(title)}`; alert('변경 완료! (미리보기 전용, 새로고침 시 초기화됩니다)'); }
+    const title=document.getElementById('app-title-input').value.trim();
+    if(title){
+        document.querySelector('header .title').innerHTML=`🎁 ${escapeHtml(title)}`;
+        saveState();
+        alert('앱 이름이 저장되었습니다.');
+    }
 }
-function mockAlert(){ alert('와이어프레임 미리보기입니다.'); }
+
+function exportData(){
+    const data = { mockItems, managedSeries, appTitle: document.querySelector('header .title').textContent.replace(/^🎁\s*/,'').trim() };
+    const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `capsule-toy-diary-backup-${new Date().toISOString().substring(0,10)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+}
+
+function importData(event){
+    const file = event.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+        try{
+            const data = JSON.parse(e.target.result);
+            if(Array.isArray(data.mockItems)) mockItems = data.mockItems;
+            if(Array.isArray(data.managedSeries)) managedSeries = data.managedSeries;
+            if(data.appTitle) document.querySelector('header .title').innerHTML = `🎁 ${escapeHtml(data.appTitle)}`;
+            saveState();
+            renderAll();
+            alert('데이터를 불러왔습니다.');
+        }catch(err){
+            alert('파일을 읽는 중 오류가 발생했습니다. JSON 형식을 확인해주세요.');
+        }
+    };
+    reader.readAsText(file);
+    event.target.value = '';
+}
+
+function resetAllData(){
+    if(!confirm('정말로 모든 데이터를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다!')) return;
+    if(!confirm('마지막 확인입니다. 저장된 모든 컬렉션과 시리즈가 사라집니다.')) return;
+    try{ localStorage.removeItem(STORAGE_KEY); }catch(e){}
+    mockItems = SEED_ITEMS.slice();
+    managedSeries = SEED_SERIES.slice();
+    document.querySelector('header .title').innerHTML = `🎁 ${DEFAULT_TITLE}`;
+    saveState();
+    renderAll();
+    alert('초기화되었습니다.');
+}
+
 function renderAll(){ renderSeriesControls(); renderSeriesManager(); renderCalendar(); renderLedgerList(); renderCollection(); renderStats(); }
 
 function initApp(){
+    loadState();
     renderSeriesControls();
     renderSeriesManager();
     renderCalendar();
