@@ -262,6 +262,7 @@ button.secondary{background:#8A84A8;}
 <div id="tab-stats" class="tab-content">
     <div class="sub-tab">
         <div class="sub-tab-item active" onclick="switchStatsTab('expense', this)">지출 통계</div>
+        <div class="sub-tab-item" onclick="switchStatsTab('total', this)">전체 통계</div>
         <div class="sub-tab-item" onclick="switchStatsTab('collection', this)">컬렉션</div>
     </div>
 
@@ -305,6 +306,45 @@ button.secondary{background:#8A84A8;}
             <div id="expense-chart-fallback" class="muted" style="display:none;text-align:center;padding:20px 0;">
                 차트 라이브러리를 불러오지 못했습니다.
             </div>
+        </div>
+    </div>
+
+    <div id="stats-total-tab" class="sub-content">
+        <div class="card">
+            <h4 style="margin:0 0 10px 0;">전체 누적 요약</h4>
+            <div class="summary-grid" style="grid-template-columns:repeat(2,1fr);">
+                <div class="summary-box">
+                    <span class="label">총 뽑기 수</span>
+                    <span id="total-stat-pull-count" class="value">0회</span>
+                </div>
+                <div class="summary-box">
+                    <span class="label">평균 지출</span>
+                    <span id="total-stat-avg-spend" class="value">0원</span>
+                </div>
+                <div class="summary-box">
+                    <span class="label">총 지출</span>
+                    <span id="total-stat-expense" class="value" style="color:var(--coin-red);">0원</span>
+                </div>
+                <div class="summary-box">
+                    <span class="label">총 수입</span>
+                    <span id="total-stat-income" class="value" style="color:var(--coin-teal);">0원</span>
+                </div>
+            </div>
+            <div class="stat-pill" style="margin-top:8px;">
+                <span>💰 누적 순지출</span>
+                <span id="total-stat-net" class="num">0원</span>
+            </div>
+            <p class="muted" style="margin:10px 0 0;text-align:center;">#이 포함된 아이템은 전체 통계에서 제외됩니다.</p>
+        </div>
+
+        <div class="card">
+            <h4 style="margin:0 0 10px 0;">시리즈별 누적 지출</h4>
+            <div id="total-series-expense-list"></div>
+        </div>
+
+        <div class="card">
+            <h4 style="margin:0 0 10px 0;">시리즈별 보유 현황</h4>
+            <div id="total-series-collection-list"></div>
         </div>
     </div>
 
@@ -484,6 +524,8 @@ function switchStatsTab(tab,el){
 
     if(tab==='expense'){
         setTimeout(renderStats,0);
+    }else if(tab==='total'){
+        setTimeout(renderTotalStats,0);
     }
 }
 
@@ -834,6 +876,111 @@ function addCollectionItem(){
     saveState();renderAll();toggleNewItemForm();
 }
 
+
+function renderTotalStats(){
+    // 아이템 이름에 #이 들어간 데이터는 전체 통계에서 제외
+    const visibleItems=mockItems.filter(item=>!isHiddenItem(item));
+
+    // 재무 합계는 배송비/택배비도 실제 지출이므로 포함
+    const visibleTx=[];
+    visibleItems.forEach(item=>{
+        if(item.acquired&&Number(item.purchasePrice)>0){
+            visibleTx.push({
+                date:item.acquired,
+                type:'expense',
+                category:item.series,
+                itemName:item.name,
+                amount:Number(item.purchasePrice),
+                location:item.location||''
+            });
+        }
+        if(item.status==='sold'&&item.soldDate&&Number(item.salePrice)>0){
+            visibleTx.push({
+                date:item.soldDate,
+                type:'income',
+                category:item.series,
+                itemName:item.name,
+                amount:Number(item.salePrice),
+                location:'판매'
+            });
+        }
+    });
+
+    const totalExpense=visibleTx
+        .filter(t=>t.type==='expense')
+        .reduce((sum,t)=>sum+Number(t.amount||0),0);
+
+    const totalIncome=visibleTx
+        .filter(t=>t.type==='income')
+        .reduce((sum,t)=>sum+Number(t.amount||0),0);
+
+    // 뽑기 수/평균 지출에서는 비용 전용 시리즈(택배비/#택배비) 제외
+    const pullItems=visibleItems.filter(item=>!isExpenseOnlySeries(item.series));
+    const pullSpend=pullItems.reduce((sum,item)=>sum+Number(item.purchasePrice||0),0);
+
+    document.getElementById('total-stat-pull-count').innerText=pullItems.length+'회';
+    document.getElementById('total-stat-avg-spend').innerText=won(
+        pullItems.length ? Math.round(pullSpend/pullItems.length) : 0
+    );
+    document.getElementById('total-stat-expense').innerText=won(totalExpense);
+    document.getElementById('total-stat-income').innerText=won(totalIncome);
+    document.getElementById('total-stat-net').innerText=won(totalExpense-totalIncome);
+
+    const expenseBySeries={};
+    visibleTx
+        .filter(t=>t.type==='expense')
+        .forEach(t=>{
+            const series=t.category||'미분류';
+            expenseBySeries[series]=(expenseBySeries[series]||0)+Number(t.amount||0);
+        });
+
+    const expenseRows=Object.entries(expenseBySeries).sort((a,b)=>b[1]-a[1]);
+    const expenseTotal=expenseRows.reduce((sum,[,amount])=>sum+amount,0);
+    const expenseContainer=document.getElementById('total-series-expense-list');
+
+    expenseContainer.innerHTML=expenseRows.length
+        ? expenseRows.map(([series,amount])=>{
+            const pct=expenseTotal?Math.round(amount/expenseTotal*100):0;
+            return `<div style="padding:9px 0;border-bottom:1px dashed var(--line);">
+                <div class="flex-between" style="gap:10px;">
+                    <span style="font-size:13px;font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">📁 ${escapeHtml(series)}</span>
+                    <span class="mono" style="font-size:13px;font-weight:700;color:var(--coin-red);flex:none;">${won(amount)}</span>
+                </div>
+                <div style="margin-top:5px;background:#EEEAF8;border-radius:999px;height:6px;overflow:hidden;">
+                    <div style="width:${pct}%;height:100%;background:var(--coin-red);"></div>
+                </div>
+            </div>`;
+        }).join('')
+        : '<p class="muted" style="text-align:center;padding:12px 0;margin:0;">지출 내역이 없습니다.</p>';
+
+    // 컬렉션 보유 현황에서는 비용 전용 시리즈 제외
+    const collectionItems=visibleItems.filter(item=>!isExpenseOnlySeries(item.series));
+    const grouped={};
+    collectionItems.forEach(item=>{
+        const series=item.series||'미분류';
+        if(!grouped[series])grouped[series]={total:0,held:0,sold:0};
+        grouped[series].total++;
+        if(item.status==='sold')grouped[series].sold++;
+        else grouped[series].held++;
+    });
+
+    const collectionRows=Object.entries(grouped)
+        .sort((a,b)=>b[1].total-a[1].total || a[0].localeCompare(b[0],'ko'));
+
+    const collectionContainer=document.getElementById('total-series-collection-list');
+    collectionContainer.innerHTML=collectionRows.length
+        ? collectionRows.map(([series,count])=>`
+            <div class="item-row">
+                <div>
+                    <b>📁 ${escapeHtml(series)}</b>
+                    <div class="muted" style="margin-top:4px;">보유 ${count.held}개 · 판매 ${count.sold}개</div>
+                </div>
+                <div class="mono" style="font-weight:700;">${count.total}개</div>
+            </div>
+        `).join('')
+        : '<p class="muted" style="text-align:center;padding:12px 0;margin:0;">컬렉션 데이터가 없습니다.</p>';
+}
+
 function renderStats(){
     const month=getSelectedStatsMonth();
     renderStatsSeriesExpense();
@@ -1134,6 +1281,7 @@ function renderAll(){
 
     renderCollection();
     try{renderStats();}catch(e){console.warn('통계 렌더링 생략:',e);}
+    try{renderTotalStats();}catch(e){console.warn('전체 통계 렌더링 생략:',e);}
 }
 function initApp(){
     loadState();
