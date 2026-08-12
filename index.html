@@ -11,6 +11,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Jua&family=Pretendard+Std:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/exceljs/dist/exceljs.min.js"></script>
 <style>
 :root{
     --navy:#1B2545;
@@ -183,14 +184,16 @@ button.secondary{background:#8A84A8;}
 <!-- 2. 뽑기기록 -->
 <div id="tab-ledger" class="tab-content">
     <div class="card">
-        <div class="flex-between" style="margin-bottom:10px;">
+        <div class="flex-between" style="margin-bottom:10px;gap:8px;flex-wrap:wrap;">
             <h4 id="ledger-summary-title" style="margin:0;">2026년 8월 요약</h4>
-            <select id="ledger-month-filter" onchange="renderLedgerList();renderStats();" style="width:auto;margin:0;padding:6px 8px;font-size:12px;">
-                <option value="2026-08">2026년 8월</option>
-                <option value="2026-07">2026년 7월</option>
-                <option value="2026-06">2026년 6월</option>
-                <option value="2026-05">2026년 5월</option>
-            </select>
+            <div style="display:flex;gap:6px;align-items:center;">
+                <select id="ledger-year-filter" onchange="renderLedgerMonthOptions();renderLedgerList();renderStats();" style="width:auto;margin:0;padding:6px 8px;font-size:12px;">
+                    <option value="">연도</option>
+                </select>
+                <select id="ledger-month-filter" onchange="renderLedgerList();renderStats();" style="width:auto;margin:0;padding:6px 8px;font-size:12px;">
+                    <option value="">월</option>
+                </select>
+            </div>
         </div>
         <div class="summary-grid">
             <div class="summary-box"><span class="label">수입</span><span id="ledger-income" class="value" style="color:var(--coin-teal);">0원</span></div>
@@ -277,7 +280,7 @@ button.secondary{background:#8A84A8;}
     <div id="sub-set-cat" class="sub-content active">
         <div class="card">
             <h4 style="margin:0 0 6px 0;">시리즈 관리</h4>
-            <p class="muted" style="margin:0 0 12px 0;line-height:1.5;">컬렉션 등록·수정·검색에서 공통으로 사용하는 시리즈입니다.</p>
+            <p class="muted" style="margin:0 0 12px 0;line-height:1.5;">컬렉션 등록·수정·검색에서 공통으로 사용하는 시리즈입니다.<br>※ <b>택배비 / #택배비</b>는 지출 내역에는 포함되지만 컬렉션/시리즈 통계에서는 제외됩니다.</p>
             <div style="display:flex;gap:5px;"><input id="series-name-input" type="text" placeholder="예: 우주 캡슐" style="margin:0;" onkeydown="if(event.key==='Enter') addSeries()"><button onclick="addSeries()" style="width:70px;margin:0;">추가</button></div>
             <ul id="series-manage-list" class="item-list" style="margin-top:10px;"></ul>
         </div>
@@ -375,6 +378,14 @@ function normalizeItem(item){
     };
 }
 function getAppTitle(){return document.querySelector('header .title').textContent.replace(/^🧸\s*/,'').trim()||DEFAULT_TITLE;}
+function isHiddenItem(item){return String(item?.name||'').includes('#');}
+function isExpenseOnlySeries(series){
+    const normalized=String(series||'')
+        .trim()
+        .replace(/^#+\s*/,'')
+        .trim();
+    return normalized==='택배비';
+}
 function saveState(){
     try{localStorage.setItem(STORAGE_KEY,JSON.stringify({mockItems,managedSeries,appTitle:getAppTitle()}));}
     catch(e){console.warn('저장 실패:',e);}
@@ -397,6 +408,7 @@ function loadState(){
 function getTransactions(){
     const tx=[];
     mockItems.forEach(item=>{
+        if(isHiddenItem(item))return;
         if(item.acquired&&Number(item.purchasePrice)>0){
             tx.push({date:item.acquired,type:'expense',category:item.series,itemName:item.name,amount:Number(item.purchasePrice),location:item.location||''});
         }
@@ -476,8 +488,75 @@ function openDateSheet(dateStr){
 function openSheet(html){document.getElementById('sheet-content').innerHTML=html;document.getElementById('bottom-sheet').classList.add('open');document.getElementById('sheet-overlay').classList.add('open');document.body.style.overflow='hidden';}
 function closeSheet(){document.getElementById('bottom-sheet').classList.remove('open');document.getElementById('sheet-overlay').classList.remove('open');document.body.style.overflow='';}
 
+
+
+function getLedgerAvailableMonths(){
+    return [...new Set(
+        getTransactions()
+            .map(t=>String(t.date||'').slice(0,7))
+            .filter(v=>/^\d{4}-\d{2}$/.test(v))
+    )].sort((a,b)=>b.localeCompare(a));
+}
+
+function renderLedgerYearFilter(){
+    const yearSelect=document.getElementById('ledger-year-filter');
+    if(!yearSelect)return;
+
+    const previous=yearSelect.value;
+    const availableMonths=getLedgerAvailableMonths();
+    const years=[...new Set(availableMonths.map(v=>v.slice(0,4)))].sort((a,b)=>b.localeCompare(a));
+
+    const currentYear=localTodayString().slice(0,4);
+    if(!years.length)years.push(currentYear);
+
+    yearSelect.innerHTML=years.map(year=>`<option value="${year}">${year}년</option>`).join('');
+
+    if(previous&&years.includes(previous)){
+        yearSelect.value=previous;
+    }else if(years.includes(currentYear)){
+        yearSelect.value=currentYear;
+    }else{
+        yearSelect.value=years[0];
+    }
+}
+
+function renderLedgerMonthOptions(){
+    const yearSelect=document.getElementById('ledger-year-filter');
+    const monthSelect=document.getElementById('ledger-month-filter');
+    if(!yearSelect||!monthSelect)return;
+
+    const year=yearSelect.value;
+    const previous=monthSelect.value;
+    const availableMonths=getLedgerAvailableMonths()
+        .filter(v=>v.startsWith(year+'-'))
+        .map(v=>v.slice(5,7))
+        .sort((a,b)=>Number(b)-Number(a));
+
+    const current=localTodayString();
+    const currentYear=current.slice(0,4);
+    const currentMonth=current.slice(5,7);
+
+    const months=availableMonths.length?availableMonths:[currentMonth];
+
+    monthSelect.innerHTML=months.map(mon=>`<option value="${mon}">${Number(mon)}월</option>`).join('');
+
+    if(previous&&months.includes(previous)){
+        monthSelect.value=previous;
+    }else if(year===currentYear&&months.includes(currentMonth)){
+        monthSelect.value=currentMonth;
+    }else{
+        monthSelect.value=months[0];
+    }
+}
+
+function getSelectedLedgerMonth(){
+    const year=document.getElementById('ledger-year-filter')?.value||localTodayString().slice(0,4);
+    const mon=document.getElementById('ledger-month-filter')?.value||localTodayString().slice(5,7);
+    return `${year}-${mon}`;
+}
+
 function renderLedgerList(){
-    const month=document.getElementById('ledger-month-filter').value;
+    const month=getSelectedLedgerMonth();
     const [year,mon]=month.split('-');
     document.getElementById('ledger-summary-title').innerText=`${year}년 ${Number(mon)}월 요약`;
     document.getElementById('ledger-list-title').innerText=`${Number(mon)}월 전체 내역`;
@@ -576,28 +655,55 @@ function addCollectionItem(){
 }
 
 function renderStats(){
-    const month=document.getElementById('ledger-month-filter')?.value||'2026-08';
-    const monthItems=mockItems.filter(p=>(p.acquired||'').startsWith(month));
+    const month=getSelectedLedgerMonth();
+
+    // '#' 아이템과 '택배비'는 컬렉션/시리즈 통계에서 제외
+    // 택배비는 getTransactions()에는 남아 달력/뽑기기록 지출 합계에는 포함됩니다.
+    const monthItems=mockItems.filter(p=>
+        !isHiddenItem(p) &&
+        !isExpenseOnlySeries(p.series) &&
+        (p.acquired||'').startsWith(month)
+    );
+
     const totalPulls=monthItems.length;
     const totalSpend=monthItems.reduce((s,p)=>s+Number(p.purchasePrice||0),0);
     document.getElementById('stat-pull-count').innerText=totalPulls+'회';
     document.getElementById('stat-avg-spend').innerText=won(totalPulls?Math.round(totalSpend/totalPulls):0);
 
     const expByCat={};
-    getTransactions().filter(t=>t.type==='expense'&&t.date.startsWith(month)).forEach(t=>expByCat[t.category]=(expByCat[t.category]||0)+t.amount);
+    getTransactions()
+        .filter(t=>t.type==='expense'&&t.date.startsWith(month)&&!isExpenseOnlySeries(t.category))
+        .forEach(t=>expByCat[t.category]=(expByCat[t.category]||0)+t.amount);
+
     const canvas=document.getElementById('expensePieChart');
     const fallback=document.getElementById('expense-chart-fallback');
     if(canvas&&typeof Chart!=='undefined'){
         fallback.style.display='none';
         if(expensePieChart)expensePieChart.destroy();
-        expensePieChart=new Chart(canvas.getContext('2d'),{type:'pie',data:{labels:Object.keys(expByCat),datasets:[{data:Object.values(expByCat),backgroundColor:['#FF4F64','#4FA6E8','#FFB627','#A67AE0','#22C3A6','#8A84A8']}]},options:{plugins:{legend:{position:'bottom'}}}});
-    }else if(fallback){fallback.style.display='block';}
+        expensePieChart=new Chart(canvas.getContext('2d'),{
+            type:'pie',
+            data:{
+                labels:Object.keys(expByCat),
+                datasets:[{
+                    data:Object.values(expByCat),
+                    backgroundColor:['#FF4F64','#4FA6E8','#FFB627','#A67AE0','#22C3A6','#8A84A8']
+                }]
+            },
+            options:{plugins:{legend:{position:'bottom'}}}
+        });
+    }else if(fallback){
+        fallback.style.display='block';
+    }
 
-    const groupSeriesList=[...new Set(mockItems.map(p=>p.series).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ko'));
-    document.getElementById('stats-plant-group-list').innerHTML=groupSeriesList.length?groupSeriesList.map(s=>{
-        const items=mockItems.filter(p=>p.series===s);
-        return `<div style="margin-bottom:12px;background:#fff;padding:14px;border-radius:12px;box-shadow:var(--shadow);"><b>📁 ${escapeHtml(s)} (${items.length}개)</b><div style="color:var(--ink-soft2);font-size:13px;margin-top:6px;line-height:1.6;">${items.map(p=>'🧸 '+escapeHtml(p.name)).join(', ')}</div></div>`;
-    }).join(''):'<p class="muted" style="text-align:center;padding:20px 0;">등록된 컬렉션이 없습니다.</p>';
+    const visibleItems=mockItems.filter(p=>!isHiddenItem(p)&&!isExpenseOnlySeries(p.series));
+    const groupSeriesList=[...new Set(visibleItems.map(p=>p.series).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ko'));
+
+    document.getElementById('stats-plant-group-list').innerHTML=groupSeriesList.length
+        ? groupSeriesList.map(s=>{
+            const items=visibleItems.filter(p=>p.series===s);
+            return `<div style="margin-bottom:12px;background:#fff;padding:14px;border-radius:12px;box-shadow:var(--shadow);"><b>📁 ${escapeHtml(s)} (${items.length}개)</b><div style="color:var(--ink-soft2);font-size:13px;margin-top:6px;line-height:1.6;">${items.map(p=>'🧸 '+escapeHtml(p.name)).join(', ')}</div></div>`;
+        }).join('')
+        : '<p class="muted" style="text-align:center;padding:20px 0;">등록된 컬렉션이 없습니다.</p>';
 }
 
 function renderSeriesControls(){
@@ -606,26 +712,182 @@ function renderSeriesControls(){
     const filter=document.getElementById('collection-series-filter');
     if(filter){const prev=filter.value;filter.innerHTML='<option value="">📁 시리즈 전체보기</option>'+managedSeries.map(v=>`<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');filter.value=managedSeries.includes(prev)?prev:'';}
 }
-function renderSeriesManager(){const list=document.getElementById('series-manage-list');if(!list)return;list.innerHTML=managedSeries.map((name,index)=>`<li class="item-row"><span>${escapeHtml(name)}</span><button class="danger" onclick="deleteSeries(${index})" style="padding:4px 8px;font-size:11px;">삭제</button></li>`).join('');}
-function addSeries(){const input=document.getElementById('series-name-input');const name=(input?.value||'').trim();if(!name){alert('시리즈명을 입력해주세요.');return;}if(managedSeries.includes(name)){alert('이미 등록된 시리즈입니다.');return;}managedSeries.push(name);input.value='';saveState();renderSeriesControls();renderSeriesManager();}
-function deleteSeries(index){const name=managedSeries[index];if(!name)return;if(mockItems.some(item=>item.series===name)){alert(`'${name}' 시리즈를 사용하는 컬렉션이 있어 삭제할 수 없습니다.`);return;}managedSeries.splice(index,1);saveState();renderSeriesControls();renderSeriesManager();}
+function renderSeriesManager(){
+    const list=document.getElementById('series-manage-list');
+    if(!list)return;
+
+    list.innerHTML=managedSeries.map((name,index)=>{
+        const usedCount=mockItems.filter(item=>item.series===name).length;
+        return `<li class="item-row">
+            <div>
+                <span>${escapeHtml(name)}</span>
+                <span class="muted" style="margin-left:5px;">${usedCount}개 사용중</span>
+            </div>
+            <div style="display:flex;gap:5px;flex:none;">
+                <button class="secondary" onclick="editSeries(${index})" style="padding:4px 8px;font-size:11px;">수정</button>
+                <button class="danger" onclick="deleteSeries(${index})" style="padding:4px 8px;font-size:11px;">삭제</button>
+            </div>
+        </li>`;
+    }).join('');
+}
+
+function addSeries(){
+    const input=document.getElementById('series-name-input');
+    const name=(input?.value||'').trim();
+    if(!name){alert('시리즈명을 입력해주세요.');return;}
+    if(managedSeries.includes(name)){alert('이미 등록된 시리즈입니다.');return;}
+
+    managedSeries.push(name);
+    input.value='';
+    saveState();
+    renderSeriesControls();
+    renderSeriesManager();
+}
+
+function editSeries(index){
+    const oldName=managedSeries[index];
+    if(!oldName)return;
+
+    const newName=(prompt('수정할 시리즈명을 입력해주세요.',oldName)||'').trim();
+    if(!newName||newName===oldName)return;
+
+    if(managedSeries.some((name,i)=>i!==index&&name===newName)){
+        alert('이미 등록된 시리즈입니다.');
+        return;
+    }
+
+    managedSeries[index]=newName;
+
+    // 해당 시리즈를 쓰고 있던 컬렉션도 함께 변경
+    mockItems.forEach(item=>{
+        if(item.series===oldName)item.series=newName;
+    });
+
+    saveState();
+    renderAll();
+    alert(`'${oldName}' → '${newName}'으로 수정했습니다.`);
+}
+
+function deleteSeries(index){
+    const name=managedSeries[index];
+    if(!name)return;
+
+    if(mockItems.some(item=>item.series===name)){
+        alert(`'${name}' 시리즈를 사용하는 컬렉션이 있어 삭제할 수 없습니다.`);
+        return;
+    }
+
+    if(!confirm(`'${name}' 시리즈를 삭제할까요?`))return;
+
+    managedSeries.splice(index,1);
+    saveState();
+    renderSeriesControls();
+    renderSeriesManager();
+}
 function changeAppTitle(){const title=document.getElementById('app-title-input').value.trim();if(title){document.querySelector('header .title').innerHTML=`🧸 ${escapeHtml(title)}`;saveState();alert('앱 이름이 저장되었습니다.');}}
 
-function exportExcel(){
-    if(typeof XLSX==='undefined'){alert('엑셀 기능을 불러오지 못했습니다. 인터넷 연결 후 다시 시도해주세요.');return;}
-    const collectionRows=mockItems.map(p=>({
-        '아이템명':p.name,'시리즈':p.series,'획득일':p.acquired,'구입금액':Number(p.purchasePrice||0),'구입위치':p.location||'',
-        '보유상태':p.status==='sold'?'판매완료':'보유중','컨디션':Number(p.condition||4),'판매일':p.soldDate||'','판매금액':Number(p.salePrice||0),
-        '최애':p.fav?'Y':'N','메모':p.note||''
-    }));
-    const seriesRows=managedSeries.map(s=>({'시리즈명':s}));
-    const settingsRows=[{'항목':'앱 이름','값':getAppTitle()}];
-    const wb=XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(collectionRows),'컬렉션');
-    XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(seriesRows),'시리즈');
-    XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(settingsRows),'설정');
-    XLSX.writeFile(wb,`gachive-${localTodayString()}.xlsx`);
+async function exportExcel(){
+    if(typeof ExcelJS==='undefined'){
+        alert('엑셀 다운로드 기능을 불러오지 못했습니다. 인터넷 연결 후 다시 시도해주세요.');
+        return;
+    }
+
+    try{
+        const wb=new ExcelJS.Workbook();
+        wb.creator='Gachive';
+        wb.created=new Date();
+
+        // 1시트: 컬렉션
+        const collectionSheet=wb.addWorksheet('컬렉션');
+        collectionSheet.columns=[
+            {header:'아이템명',key:'name',width:24},
+            {header:'시리즈',key:'series',width:22},
+            {header:'획득일',key:'acquired',width:14},
+            {header:'구입금액',key:'purchasePrice',width:14},
+            {header:'구입위치',key:'location',width:22},
+            {header:'보유상태',key:'status',width:12},
+            {header:'컨디션',key:'condition',width:10},
+            {header:'판매일',key:'soldDate',width:14},
+            {header:'판매금액',key:'salePrice',width:14},
+            {header:'최애',key:'fav',width:8},
+            {header:'메모',key:'note',width:40}
+        ];
+
+        mockItems.forEach(p=>collectionSheet.addRow({
+            name:p.name,
+            series:p.series,
+            acquired:p.acquired,
+            purchasePrice:Number(p.purchasePrice||0),
+            location:p.location||'',
+            status:p.status==='sold'?'판매완료':'보유중',
+            condition:Number(p.condition||4),
+            soldDate:p.soldDate||'',
+            salePrice:Number(p.salePrice||0),
+            fav:p.fav?'Y':'N',
+            note:p.note||''
+        }));
+
+        // 2시트: 시리즈 — 컬렉션 시트의 드롭다운 원본
+        const seriesSheet=wb.addWorksheet('시리즈');
+        seriesSheet.columns=[{header:'시리즈명',key:'seriesName',width:28}];
+        managedSeries.forEach(seriesName=>seriesSheet.addRow({seriesName}));
+
+        // 3시트: 설정
+        const settingsSheet=wb.addWorksheet('설정');
+        settingsSheet.columns=[
+            {header:'항목',key:'item',width:18},
+            {header:'값',key:'value',width:28}
+        ];
+        settingsSheet.addRow({item:'앱 이름',value:getAppTitle()});
+
+        // 헤더 스타일
+        [collectionSheet,seriesSheet,settingsSheet].forEach(ws=>{
+            ws.getRow(1).font={bold:true,color:{argb:'FFFFFFFF'}};
+            ws.getRow(1).fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF1B2545'}};
+            ws.getRow(1).alignment={vertical:'middle',horizontal:'center'};
+            ws.getRow(1).height=22;
+            ws.views=[{state:'frozen',ySplit:1}];
+        });
+
+        // 금액 표시
+        collectionSheet.getColumn('purchasePrice').numFmt='#,##0';
+        collectionSheet.getColumn('salePrice').numFmt='#,##0';
+        collectionSheet.getColumn('note').alignment={wrapText:true,vertical:'top'};
+
+        // 시리즈 드롭다운: 2시트의 목록을 직접 참조
+        // 데이터가 없는 새 행도 사용할 수 있도록 1000행까지 적용
+        const seriesEndRow=Math.max(2,managedSeries.length+1);
+        const seriesFormula=`'시리즈'!$A$2:$A$${seriesEndRow}`;
+        for(let row=2;row<=1001;row++){
+            collectionSheet.getCell(`B${row}`).dataValidation={
+                type:'list',
+                allowBlank:true,
+                formulae:[seriesFormula],
+                showErrorMessage:true,
+                errorTitle:'시리즈 선택',
+                error:'시리즈 시트에 등록된 값 중에서 선택해주세요.'
+            };
+        }
+
+        // 엑셀에서 새 행을 추가해 다시 업로드할 수 있도록 빈 행의 모양도 유지
+        collectionSheet.autoFilter={from:'A1',to:'K1'};
+
+        const buffer=await wb.xlsx.writeBuffer();
+        const blob=new Blob([buffer],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+        const url=URL.createObjectURL(blob);
+        const a=document.createElement('a');
+        a.href=url;
+        a.download=`gachive-${localTodayString()}.xlsx`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+    }catch(err){
+        console.error(err);
+        alert('엑셀 파일을 만드는 중 오류가 발생했습니다.');
+    }
 }
+
 function parseFav(v){return ['Y','YES','TRUE','1','최애'].includes(String(v??'').trim().toUpperCase());}
 function parseStatus(v){return String(v??'').includes('판매')?'sold':'held';}
 function parseCondition(v){const n=Number(String(v??'').match(/[1-4]/)?.[0]);return n>=1&&n<=4?n:4;}
@@ -680,6 +942,8 @@ function renderAll(){
     renderSeriesControls();
     renderSeriesManager();
     renderCalendar();
+    renderLedgerYearFilter();
+    renderLedgerMonthOptions();
     renderLedgerList();
     renderCollection();
     try{renderStats();}catch(e){console.warn('통계 렌더링 생략:',e);}
