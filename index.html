@@ -260,37 +260,59 @@ button.secondary{background:#8A84A8;}
 
 <!-- 4. 통계 -->
 <div id="tab-stats" class="tab-content">
-    <div class="card flex-between" style="margin-bottom:14px;gap:8px;flex-wrap:wrap;">
-        <h4 style="margin:0;">통계 기간</h4>
-        <div style="display:flex;gap:6px;align-items:center;">
-            <select id="stats-year-filter" onchange="renderStatsMonthOptions();renderStats();" style="width:auto;margin:0;padding:6px 8px;font-size:12px;">
-                <option value="">연도</option>
-            </select>
-            <select id="stats-month-filter" onchange="renderStats();" style="width:auto;margin:0;padding:6px 8px;font-size:12px;">
-                <option value="">월</option>
-            </select>
-        </div>
-    </div>
-    <div class="card" style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;">
-        <div class="stat-pill"><span>🎟️ 이번달 뽑기 횟수(추정)</span><span class="num" id="stat-pull-count">0회</span></div>
-        <div class="stat-pill"><span>💸 뽑기당 평균 지출</span><span class="num" id="stat-avg-spend">0원</span></div>
-    </div>
-    <div class="card">
-        <div class="flex-between" style="margin-bottom:10px;">
-            <h4 style="margin:0;">시리즈별 지출</h4>
-            <span class="muted">선택한 월 기준</span>
-        </div>
-        <div id="stats-series-expense-list"></div>
+    <div class="sub-tab">
+        <div class="sub-tab-item active" onclick="switchStatsTab('expense', this)">지출 통계</div>
+        <div class="sub-tab-item" onclick="switchStatsTab('collection', this)">컬렉션</div>
     </div>
 
-    <div class="card">
-        <h4 style="margin:0 0 10px 0;">시리즈별 지출 비율</h4>
-        <div style="max-width:250px;margin:0 auto;"><canvas id="expensePieChart"></canvas></div>
-        <div id="expense-chart-fallback" class="muted" style="display:none;text-align:center;padding:20px 0;">차트 라이브러리를 불러오지 못했습니다.</div>
+    <div id="stats-expense-tab" class="sub-content active">
+        <div class="card flex-between" style="margin-bottom:14px;gap:8px;flex-wrap:wrap;">
+            <h4 style="margin:0;">통계 기간</h4>
+            <div style="display:flex;gap:6px;align-items:center;">
+                <select id="stats-year-filter" onchange="renderStatsMonthOptions();renderStats();" style="width:auto;margin:0;padding:6px 8px;font-size:12px;">
+                    <option value="">연도</option>
+                </select>
+                <select id="stats-month-filter" onchange="renderStats();" style="width:auto;margin:0;padding:6px 8px;font-size:12px;">
+                    <option value="">월</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="card" style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;">
+            <div class="stat-pill">
+                <span>🎟️ 이번달 뽑기 횟수(추정)</span>
+                <span class="num" id="stat-pull-count">0회</span>
+            </div>
+            <div class="stat-pill">
+                <span>💸 뽑기당 평균 지출</span>
+                <span class="num" id="stat-avg-spend">0원</span>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="flex-between" style="margin-bottom:10px;">
+                <h4 style="margin:0;">시리즈별 지출</h4>
+                <span class="muted">선택한 월 기준</span>
+            </div>
+            <div id="stats-series-expense-list"></div>
+        </div>
+
+        <div class="card">
+            <h4 style="margin:0 0 10px 0;">시리즈별 지출 비율</h4>
+            <div style="max-width:250px;margin:0 auto;">
+                <canvas id="expensePieChart"></canvas>
+            </div>
+            <div id="expense-chart-fallback" class="muted" style="display:none;text-align:center;padding:20px 0;">
+                차트 라이브러리를 불러오지 못했습니다.
+            </div>
+        </div>
     </div>
-    <div class="card">
-        <h4 style="margin:0 0 10px 0;">시리즈별 컬렉션 모아보기</h4>
-        <div id="stats-plant-group-list"></div>
+
+    <div id="stats-collection-tab" class="sub-content">
+        <div class="card">
+            <h4 style="margin:0 0 10px 0;">시리즈별 컬렉션 모아보기</h4>
+            <div id="stats-plant-group-list"></div>
+        </div>
     </div>
 </div>
 
@@ -451,6 +473,20 @@ function switchTab(tabId,el){
     closeSheet();
     if(tabId==='stats')setTimeout(renderStats,0);
 }
+function switchStatsTab(tab,el){
+    const container=document.getElementById('tab-stats');
+    container.querySelectorAll('.sub-tab-item').forEach(i=>i.classList.remove('active'));
+    Array.from(container.children).filter(c=>c.classList.contains('sub-content')).forEach(c=>c.classList.remove('active'));
+    el.classList.add('active');
+
+    const target=document.getElementById(`stats-${tab}-tab`);
+    if(target)target.classList.add('active');
+
+    if(tab==='expense'){
+        setTimeout(renderStats,0);
+    }
+}
+
 function switchSubTab(main,sub){
     const container=document.getElementById('tab-settings');
     container.querySelectorAll('.sub-tab-item').forEach(i=>i.classList.remove('active'));
