@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#1B2545">
+<title>캡슐토이 다이어리 · 와이어프레임</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jua&family=Pretendard+Std:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+    :root{
+        --navy:#1B2545;
+        --navy-soft:#3A4370;
+        --ink:#241C3D;
+        --ink-soft:#6660870;
+        --ink-soft2:#6A6389;
+        --bg:#F5F1FB;
+        --paper:#FFFDF9;
+        --line:#E6E1F2;
+        --coin-red:#FF4F64;
+        --coin-teal:#22C3A6;
+        --ssr:#FFB627;
+        --sr:#4FA6E8;
+        --r:#A67AE0;
+        --n:#ABA7C4;
+        --shadow: 0 3px 14px rgba(36,28,61,0.08);
+    }
+    *{-webkit-tap-highlight-color:transparent; box-sizing:border-box;}
+    body{
+        margin:0; font-family:'Pretendard Std','Pretendard','Malgun Gothic',sans-serif;
+        background:
+            radial-gradient(circle at 1px 1px, rgba(36,28,61,0.06) 1px, transparent 0) 0 0/18px 18px,
+            var(--bg);
+        color:var(--ink); padding-bottom:84px;
+    }
+    h3,h4{font-family:'Jua',sans-serif; font-weight:400; letter-spacing:-0.01em; color:var(--ink);}
+    .mono{font-family:'Space Mono',monospace;}
+
+    header{
+        background:var(--navy);
+        background-image: radial-gradient(ellipse at top, rgba(255,255,255,0.08), transparent 60%);
+        color:#F2EFFB; padding:16px 20px 10px; text-align:center; position:sticky; top:0; z-index:100;
+        box-shadow:0 2px 14px rgba(27,37,69,0.25);
+    }
+    header .title{font-family:'Jua',sans-serif; font-size:20px; letter-spacing:0.02em; display:flex; align-items:center; justify-content:center; gap:6px;}
+    .coin-slot{ width:64px; height:8px; margin:8px auto 0; background:var(--navy-soft); border-radius:6px; position:relative; }
+    .coin-slot::after{ content:""; position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:34px; height:4px; background:#151b33; border-radius:3px; }
+
+    .mock-banner{ background:#2E2A54; color:#D9D2F5; font-size:11px; text-align:center; padding:6px 10px; letter-spacing:0.02em; }
+
+    .tab-content{display:none; padding:15px; animation:fadeIn 0.25s;}
+    .tab-content.active{display:block;}
+    @keyframes fadeIn{from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:translateY(0);}}
+
+    .card{ background:var(--paper); padding:16px; border-radius:18px; margin-bottom:14px; box-shadow:var(--shadow); border:1px solid var(--line); position:relative;}
+    .flex-between{display:flex; justify-content:space-between; align-items:center;}
+
+    .bottom-nav{position:fixed; bottom:0; width:100%; display:flex; background:var(--paper); border-top:1px solid var(--line); z-index:90; border-top-left-radius:20px; border-top-right-radius:20px; box-shadow:0 -6px 18px rgba(27,37,69,0.08);}
+    .nav-item{flex:1; text-align:center; padding:11px 0 9px; font-size:11px; cursor:pointer; color:#B0AAC9; transition:0.2s;}
+    .nav-item.active{color:var(--navy); font-weight:bold;}
+    .nav-item div{font-size:18px; margin-bottom:2px;}
+
+    .sub-tab{display:flex; background:#EEEAF8; border-radius:12px; margin-bottom:15px; padding:3px;}
+    .sub-tab-item{flex:1; padding:8px; text-align:center; cursor:pointer; font-size:13px; font-weight:600; border-radius:10px; color:var(--ink-soft2);}
+    .sub-tab-item.active{background:var(--paper); color:var(--navy); box-shadow:0 2px 4px rgba(27,37,69,0.1);}
+    .sub-content{display:none;} .sub-content.active{display:block;}
+
+    input,select,textarea{
+        border:1px solid var(--line); background:#FAF8FE; padding:11px 12px; margin:6px 0; border-radius:12px;
+        font-size:14px; width:100%; color:var(--ink); font-family:inherit;
+    }
+    input:focus,select:focus,textarea:focus{outline:2px solid var(--sr); outline-offset:1px;}
+
+    button{ border:none; border-radius:12px; background:var(--navy); color:#F2EFFB; padding:12px; font-weight:700; font-size:13px; cursor:pointer; transition:0.15s;}
+    button:active{transform:scale(0.97);}
+    button.danger{background:var(--coin-red);}
+    button.secondary{background:#8A84A8;}
+
+    .calendar-grid{display:grid; grid-template-columns:repeat(7,1fr); gap:5px; text-align:center;}
+    .calendar-header{font-weight:bold; color:var(--ink-soft2); padding:5px 0; font-size:12px;}
+    .calendar-day{background:#FAF8FE; min-height:55px; border-radius:12px; padding:4px; display:flex; flex-direction:column; justify-content:space-between; cursor:pointer; border:1px solid var(--line);}
+    .calendar-day.empty{background:transparent; border:none; cursor:default;}
+    .calendar-day .num{font-size:12px; font-weight:bold; text-align:left; color:var(--ink-soft2);}
+    .calendar-day .dots{display:flex; justify-content:center; gap:2px; font-size:10px; flex-wrap:wrap;}
+    .calendar-day.today{border:2px solid var(--ssr); background:#FFFAEE;}
+
+    .bottom-sheet{position:fixed; bottom:-100%; left:0; width:100%; background:var(--paper); border-top-left-radius:22px; border-top-right-radius:22px; box-shadow:0 -5px 20px rgba(27,37,69,0.18); z-index:1000; transition:bottom 0.3s ease; max-height:80%; overflow-y:auto; padding:20px;}
+    .bottom-sheet.open{bottom:0;}
+    .sheet-overlay{position:fixed; inset:0; background:rgba(20,16,40,0.5); z-index:999; display:none;}
+    .sheet-overlay.open{display:block;}
+    .sheet-close{float:right; font-size:20px; cursor:pointer; color:#C3BEDA;}
+
+    .item-list{list-style:none; padding:0; margin:0;}
+    .item-row{display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px dashed var(--line); align-items:center; gap:8px;}
+    .item-row:last-child{border-bottom:none;}
+
+    .badge{padding:4px 8px; border-radius:8px; font-size:10px; color:white; font-weight:bold; white-space:nowrap;}
+    .badge.exp{background:var(--coin-red);}
+    .badge.inc{background:var(--coin-teal);}
+    .badge.held{background:var(--coin-teal);}
+    .badge.sold{background:#9089AC;}
+    .badge.ssr{background:var(--ssr); color:#3A2900;}
+    .badge.sr{background:var(--sr);}
+    .badge.r{background:var(--r);}
+    .badge.n{background:var(--n); color:#2b2840;}
+
+    .capsule{ width:22px; height:22px; border-radius:50%; display:inline-block; flex:none;
+        border:1.5px solid rgba(0,0,0,0.15);
+        box-shadow: inset 0 -3px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.15); }
+    .capsule.ssr{ background:linear-gradient(to bottom, rgba(255,255,255,0.9) 50%, var(--ssr) 50%);}
+    .capsule.sr{ background:linear-gradient(to bottom, rgba(255,255,255,0.9) 50%, var(--sr) 50%);}
+    .capsule.r{ background:linear-gradient(to bottom, rgba(255,255,255,0.9) 50%, var(--r) 50%);}
+    .capsule.n{ background:linear-gradient(to bottom, rgba(255,255,255,0.9) 50%, var(--n) 50%);}
+
+    .stat-pill{ display:flex; align-items:center; gap:8px; background:#FAF8FE; border:1px solid var(--line); border-radius:12px; padding:10px 12px; }
+    .stat-pill .num{font-family:'Space Mono',monospace; font-weight:700; font-size:16px; margin-left:auto;}
+
+    .fav-star{ color:var(--ssr); font-size:14px; margin-left:4px; }
+    .collection-card{cursor:pointer; transition:transform .15s, box-shadow .15s;}
+    .collection-card:active{transform:scale(.99);}
+    .muted{font-size:11px; color:var(--ink-soft2);}
+    .summary-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:8px;}
+    .summary-box{background:#FAF8FE; border:1px solid var(--line); border-radius:12px; padding:10px; text-align:center;}
+    .summary-box .label{font-size:11px; color:var(--ink-soft2); display:block; margin-bottom:4px;}
+    .summary-box .value{font-family:'Space Mono',monospace; font-size:13px; font-weight:700;}
+    .form-actions{display:flex; gap:8px; margin-top:12px;}
+    .form-actions button{flex:1;}
+
+    /* 접이식 등록 카드 */
+    .accordion-header{cursor:pointer; user-select:none;}
+    .accordion-header .chevron{transition:transform .2s ease; font-size:13px; color:var(--ink-soft2);}
+    .accordion-header.open .chevron{transform:rotate(180deg);}
+    .accordion-body{overflow:hidden; max-height:0; transition:max-height .25s ease;}
+    .accordion-body.open{max-height:2000px;}
+    .accordion-body-inner{padding-top:14px;}
+</style>
+</head>
+<body>
+
+<header id="main-header">
+    <div class="title">🎁 캡슐토이 다이어리</div>
+    <div class="coin-slot"></div>
+</header>
+<div class="mock-banner">🖼️ 와이어프레임 미리보기 · 목데이터이며 저장되지 않습니다</div>
+
+<!-- 1. 달력 -->
+<div id="tab-calendar" class="tab-content active">
+    <div class="card flex-between" style="margin-bottom:10px;">
+        <button onclick="changeMonth(-1)" style="width:auto; padding:5px 15px;">◀</button>
+        <h3 id="calendar-month-title" style="margin:0;">2026년 8월</h3>
+        <button onclick="changeMonth(1)" style="width:auto; padding:5px 15px;">▶</button>
+    </div>
+    <div class="card" style="padding:10px;">
+        <div class="calendar-grid">
+            <div class="calendar-header" style="color:var(--coin-red);">일</div><div class="calendar-header">월</div><div class="calendar-header">화</div><div class="calendar-header">수</div><div class="calendar-header">목</div><div class="calendar-header">금</div><div class="calendar-header" style="color:var(--sr);">토</div>
+        </div>
+        <div id="calendar-days-grid" class="calendar-grid" style="margin-top:5px;"></div>
+        <div style="font-size:11px; color:var(--ink-soft2); margin-top:10px; display:flex; gap:12px; flex-wrap:wrap; justify-content:center;">
+            <span>🔴 뽑기 지출</span><span>🟢 판매/환급 수입</span>
+        </div>
+    </div>
+</div>
+
+<!-- 2. 뽑기기록 -->
+<div id="tab-ledger" class="tab-content">
+    <div class="card">
+        <div class="flex-between" style="margin-bottom:10px;">
+            <h4 id="ledger-summary-title" style="margin:0;">2026년 8월 요약</h4>
+            <select id="ledger-month-filter" onchange="renderAll()" style="width:auto; margin:0; padding:6px 8px; font-size:12px;">
+                <option value="2026-08">2026년 8월</option>
+                <option value="2026-07">2026년 7월</option>
+                <option value="2026-06">2026년 6월</option>
+                <option value="2026-05">2026년 5월</option>
+            </select>
+        </div>
+        <div class="summary-grid">
+            <div class="summary-box">
+                <span class="label">수입</span>
+                <span id="ledger-income" class="value" style="color:var(--coin-teal);">0원</span>
+            </div>
+            <div class="summary-box">
+                <span class="label">지출</span>
+                <span id="ledger-expense" class="value" style="color:var(--coin-red);">0원</span>
+            </div>
+            <div class="summary-box">
+                <span class="label">순지출</span>
+                <span id="ledger-net" class="value">0원</span>
+            </div>
+        </div>
+        <p class="muted" style="margin:10px 0 0; text-align:center;">컬렉션의 구입·판매 정보를 기준으로 자동 집계되는 조회 전용 화면입니다.</p>
+    </div>
+
+    <div class="card">
+        <div class="flex-between" style="margin-bottom:10px;">
+            <h4 id="ledger-list-title" style="margin:0;">8월 전체 내역</h4>
+            <span class="muted"></span>
+        </div>
+        <ul id="ledger-list" class="item-list"></ul>
+    </div>
+</div>
+
+<!-- 3. 컬렉션 -->
+<div id="tab-plant" class="tab-content">
+    <div class="card">
+        <div class="flex-between accordion-header" id="new-item-accordion-header" onclick="toggleNewItemForm()">
+            <h4 style="margin:0;">새 아이템 등록 🧸</h4>
+            <span class="chevron">▾</span>
+        </div>
+        <div class="accordion-body" id="new-item-accordion-body">
+        <div class="accordion-body-inner">
+        <div style="display:flex; gap:8px; margin-bottom:8px;">
+            <div style="flex:1;">
+                <label class="muted">아이템 이름</label>
+                <input id="new-name" type="text" placeholder="예: 고양이 미니어처" style="margin:2px 0 0;">
+            </div>
+            <div style="flex:1;">
+                <label class="muted">시리즈</label>
+                <select id="new-series" style="margin:2px 0 0;"><option>동물 피규어</option><option>미니어처 소품</option><option>캐릭터 키링</option><option>빵 스트랩</option></select>
+            </div>
+        </div>
+        <div style="display:flex; gap:8px; margin-bottom:8px;">
+            <div style="flex:1;">
+                <label class="muted">희귀도</label>
+                <select id="new-rarity" style="margin:2px 0 0;"><option>레귤러</option><option>레어</option><option>시크릿</option></select>
+            </div>
+            <div style="flex:1;">
+                <label class="muted">획득 방식</label>
+                <input id="new-method" type="text" placeholder="예: 뽑기 성공" style="margin:2px 0 0;">
+            </div>
+        </div>
+        <div style="display:flex; gap:8px; margin-bottom:8px;">
+            <div style="flex:1;">
+                <label class="muted">획득일</label>
+                <input id="new-acquired" type="date" value="2026-08-12" style="margin:2px 0 0;">
+            </div>
+            <div style="flex:1;">
+                <label class="muted">구입금액</label>
+                <input id="new-purchase-price" type="number" min="0" placeholder="금액" style="margin:2px 0 0;">
+            </div>
+        </div>
+        <div style="margin-bottom:8px;">
+            <label class="muted">구입 위치</label>
+            <input id="new-location" type="text" placeholder="예: 홍대 가챠샵" style="margin:2px 0 0;">
+        </div>
+        <div style="margin-bottom:8px;">
+            <label class="muted">메모 / 상세설명</label>
+            <textarea id="new-note" rows="3" placeholder="예: 홍대에서 뽑음 / 도색 살짝 벗겨짐 / 중복이라 교환 예정" style="margin:2px 0 0; resize:vertical;"></textarea>
+        </div>
+        <div style="display:flex; gap:8px; margin-bottom:8px;">
+            <div style="flex:1;">
+                <label class="muted">보유 여부</label>
+                <select id="new-status" onchange="toggleNewSaleFields()" style="margin:2px 0 0;"><option value="held">🌟 보유중</option><option value="sold">💰 판매완료</option></select>
+            </div>
+            <div style="flex:1;">
+                <label class="muted">상태(컨디션)</label>
+                <select id="new-condition" style="margin:2px 0 0;"><option value="4">⭐⭐⭐⭐ 최상</option><option value="3">⭐⭐⭐ 좋음</option><option value="2">⭐⭐ 보통</option><option value="1">⭐ 나쁨</option></select>
+            </div>
+        </div>
+        <div id="new-sale-fields" style="display:none; gap:8px; margin-bottom:8px;">
+            <div style="flex:1;">
+                <label class="muted">판매일</label>
+                <input id="new-sold-date" type="date" style="margin:2px 0 0;">
+            </div>
+            <div style="flex:1;">
+                <label class="muted">판매금액</label>
+                <input id="new-sale-price" type="number" min="0" placeholder="금액" style="margin:2px 0 0;">
+            </div>
+        </div>
+        <div style="margin-bottom:14px;">
+            <label style="font-size:13px; display:flex; align-items:center; gap:5px; cursor:pointer;">
+                <input id="new-fav" type="checkbox" style="width:auto; margin:0; transform:scale(1.1);"> ⭐ 최애 등록
+            </label>
+        </div>
+        <button onclick="addCollectionItem()" style="width:100%;">아이템 등록</button>
+        </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="flex-between" style="margin-bottom:10px;">
+            <h4 style="margin:0;">컬렉션 검색 🎴</h4>
+            <button onclick="resetCollectionFilter()" style="padding:4px 10px; font-size:11px; background:#8A84A8; border-radius:8px;">초기화</button>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:15px;">
+            <input id="collection-search" oninput="renderCollection()" type="text" placeholder="아이템 이름으로 검색..." style="margin:0;">
+            <div style="display:flex; gap:8px;">
+                <select id="collection-series-filter" onchange="renderCollection()" style="flex:1; margin:0; font-size:13px;"><option value="">📁 시리즈 전체보기</option><option>동물 피규어</option><option>미니어처 소품</option><option>캐릭터 키링</option><option>빵 스트랩</option></select>
+                <select id="collection-rarity-filter" onchange="renderCollection()" style="flex:1; margin:0; font-size:13px;"><option value="">🏷️ 희귀도 전체보기</option><option>시크릿</option><option>레어</option><option>레귤러</option></select>
+            </div>
+        </div>
+        <div id="plant-container"></div>
+    </div>
+</div>
+
+<!-- 4. 통계 -->
+<div id="tab-stats" class="tab-content">
+    <div class="sub-tab">
+        <div id="sub-btn-stats-ledger" class="sub-tab-item active" onclick="switchSubTab('stats','ledger')">지출 통계</div>
+        <div id="sub-btn-stats-plant" class="sub-tab-item" onclick="switchSubTab('stats','plant')">희귀도 분포</div>
+    </div>
+
+    <div id="sub-stats-ledger" class="sub-content active">
+        <div class="card" style="display:flex; flex-direction:column; gap:8px; margin-bottom:14px;">
+            <div class="stat-pill"><span>🎟️ 이번달 뽑기 횟수(추정)</span><span class="num">15회</span></div>
+            <div class="stat-pill"><span>💸 뽑기당 평균 지출</span><span class="num">4,333원</span></div>
+            <div class="stat-pill"><span>🎁 시크릿 당첨률</span><span class="num">33%</span></div>
+        </div>
+        <div class="card">
+            <h4 style="margin:0 0 10px 0;">시리즈별 지출 비율</h4>
+            <div style="max-width:250px; margin:0 auto;"><canvas id="expensePieChart"></canvas></div>
+        </div>
+    </div>
+
+    <div id="sub-stats-plant" class="sub-content">
+        <div class="card">
+            <h4 style="margin:0 0 12px 0;">희귀도별 보유 현황</h4>
+            <div id="rarity-bars" style="display:flex; flex-direction:column; gap:10px;"></div>
+        </div>
+        <div class="card">
+            <h4 style="margin:0 0 10px 0;">시리즈별 컬렉션 모아보기</h4>
+            <div id="stats-plant-group-list"></div>
+        </div>
+    </div>
+</div>
+
+<!-- 5. 설정 -->
+<div id="tab-settings" class="tab-content">
+    <div class="sub-tab">
+        <div id="sub-btn-set-cat" class="sub-tab-item active" onclick="switchSubTab('set','cat')">시리즈 관리</div>
+        <div id="sub-btn-set-backup" class="sub-tab-item" onclick="switchSubTab('set','backup')">데이터 백업</div>
+        <div id="sub-btn-set-name" class="sub-tab-item" onclick="switchSubTab('set','name')">앱 설정</div>
+    </div>
+
+    <div id="sub-set-cat" class="sub-content active">
+        <div class="card">
+            <h4 style="margin:0 0 6px 0;">시리즈 관리</h4>
+            <p class="muted" style="margin:0 0 12px 0; line-height:1.5;">컬렉션 등록·수정·검색에서 공통으로 사용하는 시리즈입니다.</p>
+            <div style="display:flex; gap:5px;">
+                <input id="series-name-input" type="text" placeholder="예: 우주 캡슐" style="margin:0;" onkeydown="if(event.key==='Enter') addSeries()">
+                <button onclick="addSeries()" style="width:70px; margin:0;">추가</button>
+            </div>
+            <ul id="series-manage-list" class="item-list" style="margin-top:10px;"></ul>
+        </div>
+    </div>
+
+    <div id="sub-set-backup" class="sub-content">
+        <div class="card">
+            <h4>데이터 내보내기 / 가져오기</h4>
+            <p style="font-size:12px; color:var(--ink-soft2); line-height:1.4;">스마트폰을 바꾸거나 데이터를 안전하게 보관할 때 사용하세요.</p>
+            <button style="background:var(--sr); margin-bottom:10px; width:100%;" onclick="mockAlert()">현재 데이터 백업 파일 다운로드</button>
+            <input type="file" style="padding:5px; width:100%; margin:0;">
+        </div>
+        <div class="card" style="border:2px solid var(--coin-red);">
+            <h4 style="color:var(--coin-red); margin:0 0 5px 0;">⚠️ 위험 구역: 데이터 초기화</h4>
+            <p style="font-size:12px; color:var(--ink-soft2); margin-bottom:10px;">모든 컬렉션 및 뽑기 내역이 영구적으로 삭제됩니다.</p>
+            <button class="danger" style="width:100%;" onclick="mockAlert()">전체 데이터 초기화 (전부 삭제)</button>
+        </div>
+    </div>
+
+    <div id="sub-set-name" class="sub-content">
+        <div class="card">
+            <h4>앱 이름 변경</h4>
+            <input type="text" id="app-title-input" placeholder="새로운 이름을 입력하세요" style="width:100%; margin:0 0 8px 0;">
+            <button onclick="changeAppTitle()" style="width:100%;">이름 변경하기</button>
+        </div>
+    </div>
+</div>
+
+<!-- 바텀 시트 -->
+<div id="sheet-overlay" class="sheet-overlay" onclick="closeSheet()"></div>
+<div id="bottom-sheet" class="bottom-sheet">
+    <span class="sheet-close" onclick="closeSheet()">✕</span>
+    <h3 id="sheet-title" style="margin-top:0;">상세 내역</h3>
+    <div id="sheet-content"></div>
+</div>
+
+<!-- 하단 네비게이션 -->
+<div class="bottom-nav">
+    <div class="nav-item active" onclick="switchTab('calendar', this)"><div>📅</div>달력</div>
+    <div class="nav-item" onclick="switchTab('ledger', this)"><div>🧾</div>뽑기기록</div>
+    <div class="nav-item" onclick="switchTab('plant', this)"><div>🧸</div>컬렉션</div>
+    <div class="nav-item" onclick="switchTab('stats', this)"><div>📊</div>통계</div>
+    <div class="nav-item" onclick="switchTab('settings', this)"><div>⚙️</div>설정</div>
+</div>
+
+<script>
+// ------ 목데이터: 컬렉션이 원본 데이터 ------
+let mockItems = [
+    {id:1, name:'고양이 미니어처', series:'미니어처 소품', rarity:'시크릿', status:'held', condition:4, acquired:'2026-08-02', method:'시크릿 당첨', purchasePrice:15000, location:'홍대 가챠샵', fav:true, soldDate:'', salePrice:0, note:'시크릿 노리고 여러 번 돌려서 뽑은 아이템. 포장 상태 양호.'},
+    {id:2, name:'강아지 피규어', series:'동물 피규어', rarity:'레어', status:'held', condition:3, acquired:'2026-07-15', method:'뽑기 성공', purchasePrice:5000, location:'강남 가챠샵', fav:false, soldDate:'', salePrice:0, note:'중복 없이 한 번에 획득.'},
+    {id:3, name:'이벤트 증정 키링', series:'캐릭터 키링', rarity:'레귤러', status:'sold', condition:2, acquired:'2026-05-01', method:'이벤트 무료', purchasePrice:0, location:'이벤트 행사장', fav:false, soldDate:'2026-08-03', salePrice:5000, note:'이벤트 증정품. 보관만 하다가 판매 완료.'},
+    {id:4, name:'크루아상 스트랩', series:'빵 스트랩', rarity:'레귤러', status:'held', condition:4, acquired:'2026-08-05', method:'뽑기 성공', purchasePrice:25000, location:'이마트 캡슐토이존', fav:false, soldDate:'', salePrice:0, note:'빵 시리즈 중 제일 마음에 들어서 보유 중.'},
+    {id:5, name:'토끼 피규어', series:'동물 피규어', rarity:'레어', status:'held', condition:3, acquired:'2026-08-07', method:'뽑기 성공', purchasePrice:10000, location:'스타필드 가챠존', fav:false, soldDate:'', salePrice:0, note:'스타필드에서 뽑음. 상태 좋음.'},
+    {id:6, name:'판다 시크릿', series:'동물 피규어', rarity:'시크릿', status:'sold', condition:1, acquired:'2026-06-20', method:'시크릿 당첨', purchasePrice:10000, location:'홍대 가챠샵', fav:false, soldDate:'2026-08-10', salePrice:8000, note:'도색 상태가 아쉬워서 판매.'},
+    {id:7, name:'캐릭터 키링 A', series:'캐릭터 키링', rarity:'레귤러', status:'held', condition:4, acquired:'2026-08-12', method:'뽑기 성공', purchasePrice:15000, location:'홍대 가챠샵', fav:false, soldDate:'', salePrice:0, note:'키링용으로 보유 중.'}
+];
+
+let managedSeries = ['동물 피규어','미니어처 소품','캐릭터 키링','빵 스트랩'];
+
+const conditionLabels = {4:'최상', 3:'좋음', 2:'보통', 1:'나쁨'};
+const rarityStyle = {'레귤러':'n', '레어':'sr', '시크릿':'ssr'};
+let currentDate = new Date(2026, 7, 1);
+let expensePieChart = null;
+
+function statusLabel(status){ return status==='sold' ? '💰 판매완료' : '🌟 보유중'; }
+function renderConditionStars(n){ return '⭐'.repeat(Number(n)) + '☆'.repeat(4-Number(n)) + ' ' + conditionLabels[n]; }
+function won(n){ return Number(n || 0).toLocaleString() + '원'; }
+function escapeHtml(str=''){ return String(str).replace(/[&<>'"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#039;','"':'&quot;'}[c])); }
+
+function toggleNewItemForm(){
+    const header=document.getElementById('new-item-accordion-header');
+    const body=document.getElementById('new-item-accordion-body');
+    const opening=!body.classList.contains('open');
+    header.classList.toggle('open', opening);
+    body.classList.toggle('open', opening);
+    if(opening) document.getElementById('new-name')?.focus();
+}
+
+// 컬렉션 데이터를 지출/수입 내역으로 변환
+function getTransactions(){
+    const tx=[];
+    mockItems.forEach(item=>{
+        if(Number(item.purchasePrice)>0){
+            tx.push({date:item.acquired, type:'expense', category:item.series, itemName:item.name, amount:Number(item.purchasePrice), location:item.location||''});
+        }
+        if(item.status==='sold' && item.soldDate && Number(item.salePrice)>0){
+            tx.push({date:item.soldDate, type:'income', category:item.series, itemName:item.name, amount:Number(item.salePrice), location:'판매'});
+        }
+    });
+    return tx.sort((a,b)=>b.date.localeCompare(a.date));
+}
+
+function switchTab(tabId, el){
+    document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+    document.getElementById('tab-'+tabId).classList.add('active');
+    el.classList.add('active');
+    closeSheet();
+    if(tabId==='stats') renderStats();
+}
+
+function switchSubTab(main, sub){
+    const container=document.getElementById('tab-'+(main==='stats'?'stats':'settings'));
+    container.querySelectorAll('.sub-tab-item').forEach(i=>i.classList.remove('active'));
+    container.querySelectorAll('.sub-content').forEach(c=>c.classList.remove('active'));
+    document.getElementById(`sub-btn-${main}-${sub}`).classList.add('active');
+    document.getElementById(`sub-${main}-${sub}`).classList.add('active');
+}
+
+function changeMonth(dir){ currentDate.setMonth(currentDate.getMonth()+dir); renderCalendar(); }
+
+function renderCalendar(){
+    const year=currentDate.getFullYear(), month=currentDate.getMonth();
+    document.getElementById('calendar-month-title').innerText=`${year}년 ${month+1}월`;
+    const firstDay=new Date(year,month,1).getDay();
+    const lastDate=new Date(year,month+1,0).getDate();
+    const todayStr='2026-08-12';
+    const tx=getTransactions();
+    let html='';
+    for(let i=0;i<firstDay;i++) html+='<div class="calendar-day empty"></div>';
+    for(let day=1;day<=lastDate;day++){
+        const dateStr=`${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+        const dow=(firstDay+day-1)%7;
+        const numColor=dow===0?'color:var(--coin-red);':(dow===6?'color:var(--sr);':'');
+        const hasExp=tx.some(t=>t.date===dateStr && t.type==='expense');
+        const hasInc=tx.some(t=>t.date===dateStr && t.type==='income');
+        html+=`<div class="calendar-day ${dateStr===todayStr?'today':''}" onclick="openDateSheet('${dateStr}')">
+            <div class="num" style="${numColor}">${day}</div>
+            <div class="dots">${hasExp?'<span>🔴</span>':''}${hasInc?'<span>🟢</span>':''}</div>
+        </div>`;
+    }
+    document.getElementById('calendar-days-grid').innerHTML=html;
+}
+
+function openDateSheet(dateStr){
+    document.getElementById('sheet-title').innerText=`${dateStr} 상세 내역`;
+    const dayTx=getTransactions().filter(t=>t.date===dateStr);
+    let html='<ul class="item-list">';
+    dayTx.forEach(t=>{
+        html+=`<li class="item-row"><div><span class="badge ${t.type==='expense'?'exp':'inc'}">${t.type==='expense'?'지출':'수입'}</span> <b>${escapeHtml(t.itemName)}</b><br><span class="muted">${escapeHtml(t.category)}${t.location?' · 📍'+escapeHtml(t.location):''}</span></div><div class="mono" style="color:var(--${t.type==='expense'?'coin-red':'coin-teal'})">${t.type==='expense'?'-':'+'}${won(t.amount)}</div></li>`;
+    });
+    if(!dayTx.length) html+='<p style="color:#9089AC; text-align:center; padding:20px 0;">기록된 내역이 없습니다.</p>';
+    html+='</ul>';
+    openSheet(html);
+}
+
+function openSheet(html){
+    document.getElementById('sheet-content').innerHTML=html;
+    document.getElementById('bottom-sheet').classList.add('open');
+    document.getElementById('sheet-overlay').classList.add('open');
+    document.body.style.overflow='hidden';
+}
+function closeSheet(){
+    document.getElementById('bottom-sheet').classList.remove('open');
+    document.getElementById('sheet-overlay').classList.remove('open');
+    document.body.style.overflow='';
+}
+
+function renderLedgerList(){
+    const month=document.getElementById('ledger-month-filter').value;
+    const [year,mon]=month.split('-');
+    document.getElementById('ledger-summary-title').innerText=`${year}년 ${Number(mon)}월 요약`;
+    document.getElementById('ledger-list-title').innerText=`${Number(mon)}월 전체 내역`;
+    const tx=getTransactions().filter(t=>t.date.startsWith(month));
+    const expense=tx.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
+    const income=tx.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0);
+    document.getElementById('ledger-income').innerText=won(income);
+    document.getElementById('ledger-expense').innerText=won(expense);
+    document.getElementById('ledger-net').innerText=won(expense-income);
+    document.getElementById('ledger-list').innerHTML=tx.length ? tx.map(t=>`
+        <li class="item-row">
+            <div><span class="badge ${t.type==='expense'?'exp':'inc'}">${t.type==='expense'?'지출':'수입'}</span> <b>${escapeHtml(t.itemName)}</b><br><span class="muted">${t.date} · ${escapeHtml(t.category)}${t.location?' · 📍'+escapeHtml(t.location):''}</span></div>
+            <div class="mono" style="color:var(--${t.type==='expense'?'coin-red':'coin-teal'})">${t.type==='expense'?'-':'+'}${won(t.amount)}</div>
+        </li>`).join('') : '<p style="color:#9089AC; text-align:center; padding:20px 0;">해당 월의 지출/수입 내역이 없습니다.</p>';
+}
+
+function renderCollection(){
+    const q=(document.getElementById('collection-search')?.value||'').trim().toLowerCase();
+    const series=document.getElementById('collection-series-filter')?.value||'';
+    const rarity=document.getElementById('collection-rarity-filter')?.value||'';
+    const filtered=mockItems.filter(p=>(!q||p.name.toLowerCase().includes(q))&&(!series||p.series===series)&&(!rarity||p.rarity===rarity));
+    let html=filtered.map(p=>{
+        const cls=rarityStyle[p.rarity];
+        return `<div class="card collection-card" onclick="openItemEditor(${p.id})">
+            <div class="flex-between">
+                <h4 style="margin:0; display:flex; align-items:center; gap:6px; min-width:0;">
+                    <span class="capsule ${cls}"></span>
+                    <span>${escapeHtml(p.name)} ${p.fav?'<span class="fav-star">⭐</span>':''}</span>
+                </h4>
+                <div style="display:flex; gap:4px; flex:none;">
+                    <span class="badge ${cls}">${p.rarity}</span>
+                    <span class="badge ${p.status}">${statusLabel(p.status)}</span>
+                </div>
+            </div>
+            <div style="font-size:13px; color:var(--ink-soft2); margin:8px 0 0; line-height:1.6;">
+                시리즈: <b>${escapeHtml(p.series)}</b><br>
+                획득일: <b>${p.acquired}</b> · 획득방식: <b>${escapeHtml(p.method||'-')}</b><br>
+                컨디션: <b>${renderConditionStars(p.condition)}</b>
+            </div>
+            <div class="muted" style="text-align:right; margin-top:7px;">눌러서 상세/수정 ›</div>
+        </div>`;
+    }).join('');
+    if(!filtered.length) html='<p style="color:#9089AC; text-align:center; padding:20px 0;">조건에 맞는 아이템이 없습니다.</p>';
+    document.getElementById('plant-container').innerHTML=html;
+}
+
+function resetCollectionFilter(){
+    document.getElementById('collection-search').value='';
+    document.getElementById('collection-series-filter').value='';
+    document.getElementById('collection-rarity-filter').value='';
+    renderCollection();
+}
+
+function openItemEditor(id){
+    const p=mockItems.find(x=>x.id===id); if(!p) return;
+    document.getElementById('sheet-title').innerText='컬렉션 상세 / 수정';
+    const seriesOptions=managedSeries.map(v=>`<option ${v===p.series?'selected':''}>${escapeHtml(v)}</option>`).join('');
+    const rarityOptions=['레귤러','레어','시크릿'].map(v=>`<option ${v===p.rarity?'selected':''}>${v}</option>`).join('');
+    const conditionOptions=[4,3,2,1].map(v=>`<option value="${v}" ${v===Number(p.condition)?'selected':''}>${'⭐'.repeat(v)} ${conditionLabels[v]}</option>`).join('');
+    const html=`
+        <label class="muted">아이템 이름</label><input id="edit-name" value="${escapeHtml(p.name)}">
+        <label class="muted">시리즈</label><select id="edit-series">${seriesOptions}</select>
+        <div style="display:flex; gap:8px;"><div style="flex:1;"><label class="muted">희귀도</label><select id="edit-rarity">${rarityOptions}</select></div><div style="flex:1;"><label class="muted">컨디션</label><select id="edit-condition">${conditionOptions}</select></div></div>
+        <label class="muted">획득 방식</label><input id="edit-method" value="${escapeHtml(p.method||'')}">
+        <div style="display:flex; gap:8px;"><div style="flex:1;"><label class="muted">획득일</label><input id="edit-acquired" type="date" value="${p.acquired}"></div><div style="flex:1;"><label class="muted">구입금액</label><input id="edit-purchase-price" type="number" min="0" value="${Number(p.purchasePrice||0)}"></div></div>
+        <label class="muted">구입 위치</label><input id="edit-location" value="${escapeHtml(p.location||'')}">
+        <label class="muted">메모 / 상세설명</label><textarea id="edit-note" rows="4" placeholder="아이템에 대한 간단한 메모를 남겨보세요." style="resize:vertical;">${escapeHtml(p.note||'')}</textarea>
+        <label class="muted">보유 여부</label><select id="edit-status" onchange="toggleEditSaleFields()"><option value="held" ${p.status==='held'?'selected':''}>🌟 보유중</option><option value="sold" ${p.status==='sold'?'selected':''}>💰 판매완료</option></select>
+        <div id="edit-sale-fields" style="display:${p.status==='sold'?'flex':'none'}; gap:8px;"><div style="flex:1;"><label class="muted">판매일</label><input id="edit-sold-date" type="date" value="${p.soldDate||''}"></div><div style="flex:1;"><label class="muted">판매금액</label><input id="edit-sale-price" type="number" min="0" value="${Number(p.salePrice||0)}"></div></div>
+        <label style="font-size:13px; display:flex; align-items:center; gap:5px; margin-top:8px;"><input id="edit-fav" type="checkbox" ${p.fav?'checked':''} style="width:auto; margin:0;"> ⭐ 최애 등록</label>
+        <div class="form-actions"><button class="danger" onclick="deleteCollectionItem(${p.id})">삭제</button><button onclick="saveCollectionItem(${p.id})">수정 저장</button></div>`;
+    openSheet(html);
+}
+
+function toggleEditSaleFields(){
+    const sold=document.getElementById('edit-status').value==='sold';
+    document.getElementById('edit-sale-fields').style.display=sold?'flex':'none';
+}
+function toggleNewSaleFields(){
+    const sold=document.getElementById('new-status').value==='sold';
+    document.getElementById('new-sale-fields').style.display=sold?'flex':'none';
+}
+
+function saveCollectionItem(id){
+    const p=mockItems.find(x=>x.id===id); if(!p) return;
+    p.name=document.getElementById('edit-name').value.trim()||p.name;
+    p.series=document.getElementById('edit-series').value;
+    p.rarity=document.getElementById('edit-rarity').value;
+    p.condition=Number(document.getElementById('edit-condition').value);
+    p.method=document.getElementById('edit-method').value.trim();
+    p.acquired=document.getElementById('edit-acquired').value;
+    p.purchasePrice=Number(document.getElementById('edit-purchase-price').value||0);
+    p.location=document.getElementById('edit-location').value.trim();
+    p.note=document.getElementById('edit-note').value.trim();
+    p.status=document.getElementById('edit-status').value;
+    p.fav=document.getElementById('edit-fav').checked;
+    p.soldDate=p.status==='sold'?document.getElementById('edit-sold-date').value:'';
+    p.salePrice=p.status==='sold'?Number(document.getElementById('edit-sale-price').value||0):0;
+    closeSheet(); renderAll();
+}
+
+function deleteCollectionItem(id){
+    if(!confirm('이 아이템을 삭제할까요?')) return;
+    mockItems=mockItems.filter(x=>x.id!==id);
+    closeSheet(); renderAll();
+}
+
+function addCollectionItem(){
+    const name=document.getElementById('new-name').value.trim();
+    if(!name){ alert('아이템 이름을 입력해주세요.'); return; }
+    const status=document.getElementById('new-status').value;
+    mockItems.unshift({
+        id:Date.now(), name, series:document.getElementById('new-series').value, rarity:document.getElementById('new-rarity').value,
+        status, condition:Number(document.getElementById('new-condition').value), acquired:document.getElementById('new-acquired').value,
+        method:document.getElementById('new-method').value.trim(), purchasePrice:Number(document.getElementById('new-purchase-price').value||0),
+        location:document.getElementById('new-location').value.trim(), note:document.getElementById('new-note').value.trim(), fav:document.getElementById('new-fav').checked,
+        soldDate:status==='sold'?document.getElementById('new-sold-date').value:'', salePrice:status==='sold'?Number(document.getElementById('new-sale-price').value||0):0
+    });
+    ['new-name','new-method','new-purchase-price','new-location','new-note','new-sold-date','new-sale-price'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('new-status').value='held'; document.getElementById('new-fav').checked=false; toggleNewSaleFields();
+    renderAll(); alert('목데이터에 등록되었습니다. 새로고침하면 초기화됩니다.');
+}
+
+function renderStats(){
+    const tx=getTransactions();
+    const expByCat={}; tx.filter(t=>t.type==='expense').forEach(t=>expByCat[t.category]=(expByCat[t.category]||0)+t.amount);
+    const canvas=document.getElementById('expensePieChart');
+    if(canvas && typeof Chart!=='undefined'){
+        if(expensePieChart) expensePieChart.destroy();
+        expensePieChart=new Chart(canvas.getContext('2d'), {type:'pie', data:{labels:Object.keys(expByCat), datasets:[{data:Object.values(expByCat), backgroundColor:['#FF4F64','#4FA6E8','#FFB627','#A67AE0','#22C3A6','#8A84A8']}]}});
+    }
+    const rarities=['레귤러','레어','시크릿']; const counts={}; rarities.forEach(r=>counts[r]=0); mockItems.forEach(p=>counts[p.rarity]++);
+    const total=mockItems.length||1; const colorMap={'레귤러':'var(--n)','레어':'var(--sr)','시크릿':'var(--ssr)'};
+    document.getElementById('rarity-bars').innerHTML=rarities.map(r=>{const pct=Math.round(counts[r]/total*100); return `<div><div class="flex-between" style="font-size:12px; margin-bottom:4px;"><span style="display:flex; align-items:center; gap:6px;"><span class="capsule ${rarityStyle[r]}"></span>${r}</span><span class="mono">${counts[r]}개 (${pct}%)</span></div><div style="background:#EEEAF8; border-radius:8px; height:8px; overflow:hidden;"><div style="width:${pct}%; height:100%; background:${colorMap[r]};"></div></div></div>`;}).join('');
+    const groupSeriesList=[...new Set(mockItems.map(p=>p.series))].sort((a,b)=>a.localeCompare(b,'ko'));
+    document.getElementById('stats-plant-group-list').innerHTML=groupSeriesList.map(s=>{const items=mockItems.filter(p=>p.series===s); return `<div style="margin-bottom:12px; background:#fff; padding:14px; border-radius:12px; box-shadow:var(--shadow);"><b>📁 ${escapeHtml(s)} (${items.length}개)</b><div style="color:var(--ink-soft2); font-size:13px; margin-top:6px; line-height:1.6;">${items.map(p=>'🧸 '+escapeHtml(p.name)).join(', ')}</div></div>`;}).join('');
+}
+
+function renderSeriesControls(){
+    const newSelect=document.getElementById('new-series');
+    if(newSelect){
+        const prev=newSelect.value;
+        newSelect.innerHTML=managedSeries.map(v=>`<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
+        if(managedSeries.includes(prev)) newSelect.value=prev;
+    }
+
+    const filter=document.getElementById('collection-series-filter');
+    if(filter){
+        const prev=filter.value;
+        filter.innerHTML='<option value="">📁 시리즈 전체보기</option>'+managedSeries.map(v=>`<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
+        filter.value=managedSeries.includes(prev)?prev:'';
+    }
+}
+
+function renderSeriesManager(){
+    const list=document.getElementById('series-manage-list');
+    if(!list) return;
+    list.innerHTML=managedSeries.map((name,index)=>`
+        <li class="item-row">
+            <span>${escapeHtml(name)}</span>
+            <button class="danger" onclick="deleteSeries(${index})" style="padding:4px 8px; font-size:11px;">삭제</button>
+        </li>`).join('');
+}
+
+function addSeries(){
+    const input=document.getElementById('series-name-input');
+    const name=(input?.value||'').trim();
+    if(!name){ alert('시리즈명을 입력해주세요.'); return; }
+    if(managedSeries.includes(name)){ alert('이미 등록된 시리즈입니다.'); return; }
+    managedSeries.push(name);
+    input.value='';
+    renderSeriesControls();
+    renderSeriesManager();
+}
+
+function deleteSeries(index){
+    const name=managedSeries[index];
+    if(!name) return;
+    if(mockItems.some(item=>item.series===name)){
+        alert(`'${name}' 시리즈를 사용하는 컬렉션이 있어 삭제할 수 없습니다.`);
+        return;
+    }
+    managedSeries.splice(index,1);
+    renderSeriesControls();
+    renderSeriesManager();
+}
+
+function changeAppTitle(){
+    const title=document.getElementById('app-title-input').value;
+    if(title){ document.querySelector('header .title').innerHTML=`🎁 ${escapeHtml(title)}`; alert('변경 완료! (미리보기 전용, 새로고침 시 초기화됩니다)'); }
+}
+function mockAlert(){ alert('와이어프레임 미리보기입니다.'); }
+function renderAll(){ renderSeriesControls(); renderSeriesManager(); renderCalendar(); renderLedgerList(); renderCollection(); renderStats(); }
+
+function initApp(){
+    renderSeriesControls();
+    renderSeriesManager();
+    renderCalendar();
+    renderLedgerList();
+    renderCollection();
+    try { renderStats(); } catch (e) { console.warn('통계 렌더링 생략:', e); }
+}
+
+if(document.readyState==='loading'){
+    document.addEventListener('DOMContentLoaded', initApp);
+}else{
+    initApp();
+}
+</script>
+</body>
+</html>
