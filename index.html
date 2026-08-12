@@ -187,10 +187,10 @@ button.secondary{background:#8A84A8;}
         <div class="flex-between" style="margin-bottom:10px;gap:8px;flex-wrap:wrap;">
             <h4 id="ledger-summary-title" style="margin:0;">2026년 8월 요약</h4>
             <div style="display:flex;gap:6px;align-items:center;">
-                <select id="ledger-year-filter" onchange="renderLedgerMonthOptions();renderLedgerList();renderStats();" style="width:auto;margin:0;padding:6px 8px;font-size:12px;">
+                <select id="ledger-year-filter" onchange="renderLedgerMonthOptions();renderLedgerSeriesFilter();renderLedgerList();" style="width:auto;margin:0;padding:6px 8px;font-size:12px;">
                     <option value="">연도</option>
                 </select>
-                <select id="ledger-month-filter" onchange="renderLedgerList();renderStats();" style="width:auto;margin:0;padding:6px 8px;font-size:12px;">
+                <select id="ledger-month-filter" onchange="renderLedgerSeriesFilter();renderLedgerList();" style="width:auto;margin:0;padding:6px 8px;font-size:12px;">
                     <option value="">월</option>
                 </select>
             </div>
@@ -202,8 +202,13 @@ button.secondary{background:#8A84A8;}
         </div>
         <p class="muted" style="margin:10px 0 0;text-align:center;">컬렉션의 구입·판매 정보를 기준으로 자동 집계되는 조회 전용 화면입니다.</p>
     </div>
-    <div class="card">
-        <div class="flex-between" style="margin-bottom:10px;"><h4 id="ledger-list-title" style="margin:0;">8월 전체 내역</h4></div>
+<div class="card">
+        <div class="flex-between" style="margin-bottom:10px;gap:8px;">
+            <h4 id="ledger-list-title" style="margin:0;">8월 전체 내역</h4>
+            <select id="ledger-series-filter" onchange="renderLedgerList()" style="width:auto;max-width:160px;margin:0;padding:6px 8px;font-size:12px;">
+                <option value="">전체 시리즈</option>
+            </select>
+        </div>
         <ul id="ledger-list" class="item-list"></ul>
     </div>
 </div>
@@ -255,10 +260,29 @@ button.secondary{background:#8A84A8;}
 
 <!-- 4. 통계 -->
 <div id="tab-stats" class="tab-content">
+    <div class="card flex-between" style="margin-bottom:14px;gap:8px;flex-wrap:wrap;">
+        <h4 style="margin:0;">통계 기간</h4>
+        <div style="display:flex;gap:6px;align-items:center;">
+            <select id="stats-year-filter" onchange="renderStatsMonthOptions();renderStats();" style="width:auto;margin:0;padding:6px 8px;font-size:12px;">
+                <option value="">연도</option>
+            </select>
+            <select id="stats-month-filter" onchange="renderStats();" style="width:auto;margin:0;padding:6px 8px;font-size:12px;">
+                <option value="">월</option>
+            </select>
+        </div>
+    </div>
     <div class="card" style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;">
         <div class="stat-pill"><span>🎟️ 이번달 뽑기 횟수(추정)</span><span class="num" id="stat-pull-count">0회</span></div>
         <div class="stat-pill"><span>💸 뽑기당 평균 지출</span><span class="num" id="stat-avg-spend">0원</span></div>
     </div>
+    <div class="card">
+        <div class="flex-between" style="margin-bottom:10px;">
+            <h4 style="margin:0;">시리즈별 지출</h4>
+            <span class="muted">선택한 월 기준</span>
+        </div>
+        <div id="stats-series-expense-list"></div>
+    </div>
+
     <div class="card">
         <h4 style="margin:0 0 10px 0;">시리즈별 지출 비율</h4>
         <div style="max-width:250px;margin:0 auto;"><canvas id="expensePieChart"></canvas></div>
@@ -555,12 +579,132 @@ function getSelectedLedgerMonth(){
     return `${year}-${mon}`;
 }
 
+
+
+function renderLedgerSeriesFilter(){
+    const select=document.getElementById('ledger-series-filter');
+    if(!select)return;
+
+    const previous=select.value;
+    const month=getSelectedLedgerMonth();
+
+    const seriesList=[...new Set(
+        getTransactions()
+            .filter(t=>t.date.startsWith(month))
+            .map(t=>t.category)
+            .filter(Boolean)
+    )].sort((a,b)=>a.localeCompare(b,'ko'));
+
+    select.innerHTML='<option value="">전체 시리즈</option>'+
+        seriesList.map(series=>`<option value="${escapeHtml(series)}">${escapeHtml(series)}</option>`).join('');
+
+    select.value=(previous&&seriesList.includes(previous))?previous:'';
+}
+
+function renderStatsYearFilter(){
+    const yearSelect=document.getElementById('stats-year-filter');
+    if(!yearSelect)return;
+
+    const previous=yearSelect.value;
+    const availableMonths=getLedgerAvailableMonths();
+    const years=[...new Set(availableMonths.map(v=>v.slice(0,4)))].sort((a,b)=>b.localeCompare(a));
+
+    const currentYear=localTodayString().slice(0,4);
+    if(!years.length)years.push(currentYear);
+
+    yearSelect.innerHTML=years.map(year=>`<option value="${year}">${year}년</option>`).join('');
+
+    if(previous&&years.includes(previous)){
+        yearSelect.value=previous;
+    }else if(years.includes(currentYear)){
+        yearSelect.value=currentYear;
+    }else{
+        yearSelect.value=years[0];
+    }
+}
+
+function renderStatsMonthOptions(){
+    const yearSelect=document.getElementById('stats-year-filter');
+    const monthSelect=document.getElementById('stats-month-filter');
+    if(!yearSelect||!monthSelect)return;
+
+    const year=yearSelect.value;
+    const previous=monthSelect.value;
+    const availableMonths=getLedgerAvailableMonths()
+        .filter(v=>v.startsWith(year+'-'))
+        .map(v=>v.slice(5,7))
+        .sort((a,b)=>Number(b)-Number(a));
+
+    const current=localTodayString();
+    const currentYear=current.slice(0,4);
+    const currentMonth=current.slice(5,7);
+
+    const months=availableMonths.length?availableMonths:[currentMonth];
+
+    monthSelect.innerHTML=months.map(mon=>`<option value="${mon}">${Number(mon)}월</option>`).join('');
+
+    if(previous&&months.includes(previous)){
+        monthSelect.value=previous;
+    }else if(year===currentYear&&months.includes(currentMonth)){
+        monthSelect.value=currentMonth;
+    }else{
+        monthSelect.value=months[0];
+    }
+}
+
+function getSelectedStatsMonth(){
+    const year=document.getElementById('stats-year-filter')?.value||localTodayString().slice(0,4);
+    const mon=document.getElementById('stats-month-filter')?.value||localTodayString().slice(5,7);
+    return `${year}-${mon}`;
+}
+
+function renderStatsSeriesExpense(){
+    const container=document.getElementById('stats-series-expense-list');
+    if(!container)return;
+
+    const month=getSelectedStatsMonth();
+    const grouped={};
+
+    // 지출 통계이므로 택배비도 포함
+    getTransactions()
+        .filter(t=>t.type==='expense'&&t.date.startsWith(month))
+        .forEach(t=>{
+            const series=t.category||'미분류';
+            grouped[series]=(grouped[series]||0)+Number(t.amount||0);
+        });
+
+    const rows=Object.entries(grouped).sort((a,b)=>b[1]-a[1]);
+    const total=rows.reduce((sum,[,amount])=>sum+amount,0);
+
+    if(!rows.length){
+        container.innerHTML='<p class="muted" style="text-align:center;padding:12px 0;margin:0;">해당 월의 지출 내역이 없습니다.</p>';
+        return;
+    }
+
+    container.innerHTML=rows.map(([series,amount])=>{
+        const pct=total?Math.round(amount/total*100):0;
+        return `<div style="padding:9px 0;border-bottom:1px dashed var(--line);">
+            <div class="flex-between" style="gap:10px;">
+                <span style="font-size:13px;font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">📁 ${escapeHtml(series)}</span>
+                <span class="mono" style="font-size:13px;font-weight:700;color:var(--coin-red);flex:none;">${won(amount)}</span>
+            </div>
+            <div style="margin-top:5px;background:#EEEAF8;border-radius:999px;height:6px;overflow:hidden;">
+                <div style="width:${pct}%;height:100%;background:var(--coin-red);"></div>
+            </div>
+        </div>`;
+    }).join('');
+}
+
 function renderLedgerList(){
     const month=getSelectedLedgerMonth();
     const [year,mon]=month.split('-');
     document.getElementById('ledger-summary-title').innerText=`${year}년 ${Number(mon)}월 요약`;
     document.getElementById('ledger-list-title').innerText=`${Number(mon)}월 전체 내역`;
-    const tx=getTransactions().filter(t=>t.date.startsWith(month));
+    const selectedSeries=document.getElementById('ledger-series-filter')?.value||'';
+    const tx=getTransactions().filter(t=>
+        t.date.startsWith(month)&&
+        (!selectedSeries||t.category===selectedSeries)
+    );
     const expense=tx.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
     const income=tx.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0);
     document.getElementById('ledger-income').innerText=won(income);
@@ -655,7 +799,8 @@ function addCollectionItem(){
 }
 
 function renderStats(){
-    const month=getSelectedLedgerMonth();
+    const month=getSelectedStatsMonth();
+    renderStatsSeriesExpense();
 
     // '#' 아이템과 '택배비'는 컬렉션/시리즈 통계에서 제외
     // 택배비는 getTransactions()에는 남아 달력/뽑기기록 지출 합계에는 포함됩니다.
@@ -942,9 +1087,15 @@ function renderAll(){
     renderSeriesControls();
     renderSeriesManager();
     renderCalendar();
+
     renderLedgerYearFilter();
     renderLedgerMonthOptions();
+    renderLedgerSeriesFilter();
     renderLedgerList();
+
+    renderStatsYearFilter();
+    renderStatsMonthOptions();
+
     renderCollection();
     try{renderStats();}catch(e){console.warn('통계 렌더링 생략:',e);}
 }
