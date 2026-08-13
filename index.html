@@ -221,23 +221,21 @@ button.secondary{background:#8A84A8;}
         </div>
         <div class="accordion-body" id="new-item-accordion-body">
             <div class="accordion-body-inner">
+                <div style="margin-bottom:8px;">
+                    <label class="muted">아이템 이름</label>
+                    <input id="new-name" type="text" placeholder="예: 고양이 미니어처" style="margin:2px 0 0;">
+                </div>
                 <div style="display:flex;gap:8px;margin-bottom:8px;">
-                    <div style="flex:1;"><label class="muted">아이템 이름</label><input id="new-name" type="text" placeholder="예: 고양이 미니어처" style="margin:2px 0 0;"></div>
                     <div style="flex:1;"><label class="muted">시리즈</label><select id="new-series" style="margin:2px 0 0;"></select></div>
+                    <div style="flex:1;"><label class="muted">구입금액</label><input id="new-purchase-price" type="number" min="0" placeholder="금액" style="margin:2px 0 0;"></div>
                 </div>
                 <div style="display:flex;gap:8px;margin-bottom:8px;">
                     <div style="flex:1;"><label class="muted">획득일</label><input id="new-acquired" type="date" value="2026-08-12" style="margin:2px 0 0;"></div>
-                    <div style="flex:1;"><label class="muted">구입금액</label><input id="new-purchase-price" type="number" min="0" placeholder="금액" style="margin:2px 0 0;"></div>
+                    <div style="flex:1;"><label class="muted">구입 위치</label><input id="new-location" type="text" placeholder="예: 홍대 가챠샵" style="margin:2px 0 0;"></div>
                 </div>
-                <div style="margin-bottom:8px;"><label class="muted">구입 위치</label><input id="new-location" type="text" placeholder="예: 홍대 가챠샵" style="margin:2px 0 0;"></div>
-                <div style="margin-bottom:8px;"><label class="muted">메모 / 상세설명</label><textarea id="new-note" rows="3" placeholder="예: 홍대에서 뽑음 / 도색 살짝 벗겨짐 / 중복이라 교환 예정" style="margin:2px 0 0;resize:vertical;"></textarea></div>
-                <div style="display:flex;gap:8px;margin-bottom:8px;">
-                    <div style="flex:1;"><label class="muted">보유 여부</label><select id="new-status" onchange="toggleNewSaleFields()" style="margin:2px 0 0;"><option value="held">🌟 보유중</option><option value="sold">💰 판매완료</option></select></div>
-                    <div style="flex:1;"><label class="muted">상태(컨디션)</label><select id="new-condition" style="margin:2px 0 0;"><option value="4">⭐⭐⭐⭐ 최상</option><option value="3">⭐⭐⭐ 좋음</option><option value="2">⭐⭐ 보통</option><option value="1">⭐ 나쁨</option></select></div>
-                </div>
-                <div id="new-sale-fields" style="display:none;gap:8px;margin-bottom:8px;">
-                    <div style="flex:1;"><label class="muted">판매일</label><input id="new-sold-date" type="date" style="margin:2px 0 0;"></div>
-                    <div style="flex:1;"><label class="muted">판매금액</label><input id="new-sale-price" type="number" min="0" placeholder="금액" style="margin:2px 0 0;"></div>
+                <div style="margin-bottom:14px;">
+                    <label class="muted">메모 / 상세설명</label>
+                    <textarea id="new-note" rows="3" placeholder="예: 홍대에서 뽑음 / 도색 살짝 벗겨짐 / 컨디션 좋음 / 중복이라 교환 예정" style="margin:2px 0 0;resize:vertical;"></textarea>
                 </div>
                 <div style="margin-bottom:14px;"><label style="font-size:13px;display:flex;align-items:center;gap:5px;cursor:pointer;"><input id="new-fav" type="checkbox" style="width:auto;margin:0;transform:scale(1.1);"> ⭐ 최애 등록</label></div>
                 <button onclick="addCollectionItem()" style="width:100%;">아이템 등록</button>
@@ -250,9 +248,9 @@ button.secondary{background:#8A84A8;}
             <h4 style="margin:0;">컬렉션 검색 🦄</h4>
             <button onclick="resetCollectionFilter()" style="padding:4px 10px;font-size:11px;background:#8A84A8;border-radius:8px;">초기화</button>
         </div>
-        <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:15px;">
-            <input id="collection-search" oninput="renderCollection()" type="text" placeholder="아이템 이름으로 검색..." style="margin:0;">
-            <select id="collection-series-filter" onchange="renderCollection()" style="margin:0;font-size:13px;"><option value="">📁 시리즈 전체보기</option></select>
+        <div style="display:flex;gap:8px;margin-bottom:15px;">
+            <input id="collection-search" oninput="renderCollection()" type="text" placeholder="이름으로 검색..." style="margin:0;flex:1.3;">
+            <select id="collection-series-filter" onchange="renderCollection()" style="margin:0;font-size:13px;flex:1;"><option value="">📁 전체 시리즈</option></select>
         </div>
         <div id="plant-container"></div>
     </div>
@@ -334,7 +332,6 @@ button.secondary{background:#8A84A8;}
                 <span>💰 누적 순지출</span>
                 <span id="total-stat-net" class="num">0원</span>
             </div>
-            <p class="muted" style="margin:10px 0 0;text-align:center;">#이 포함된 아이템은 전체 통계에서 제외됩니다.</p>
         </div>
 
         <div class="card">
@@ -366,7 +363,7 @@ button.secondary{background:#8A84A8;}
     <div id="sub-set-cat" class="sub-content active">
         <div class="card">
             <h4 style="margin:0 0 6px 0;">시리즈 관리</h4>
-            <p class="muted" style="margin:0 0 12px 0;line-height:1.5;">컬렉션 등록·수정·검색에서 공통으로 사용하는 시리즈입니다.<br>※ <b>택배비 / #택배비</b>는 지출 내역에는 포함되지만 컬렉션/시리즈 통계에서는 제외됩니다.</p>
+            <p class="muted" style="margin:0 0 12px 0;line-height:1.5;">컬렉션 등록·수정·검색에서 공통으로 사용하는 시리즈입니다.<br>※ <b>배송비 / 수수료</b>는 지출 내역에는 포함되지만 컬렉션/시리즈 통계에서는 제외됩니다.</p>
             <div style="display:flex;gap:5px;"><input id="series-name-input" type="text" placeholder="예: 우주 캡슐" style="margin:0;" onkeydown="if(event.key==='Enter') addSeries()"><button onclick="addSeries()" style="width:70px;margin:0;">추가</button></div>
             <ul id="series-manage-list" class="item-list" style="margin-top:10px;"></ul>
         </div>
@@ -426,16 +423,15 @@ button.secondary{background:#8A84A8;}
 const STORAGE_KEY='capsule-toy-diary-v1';
 const DEFAULT_TITLE='Gachive';
 const SEED_ITEMS=[
-    {id:1,name:'고양이 미니어처',series:'미니어처 소품',status:'held',condition:4,acquired:'2026-08-02',purchasePrice:15000,location:'홍대 가챠샵',fav:true,soldDate:'',salePrice:0,note:'시크릿 노리고 여러 번 돌려서 뽑은 아이템. 포장 상태 양호.'},
-    {id:2,name:'강아지 피규어',series:'동물 피규어',status:'held',condition:3,acquired:'2026-07-15',purchasePrice:5000,location:'강남 가챠샵',fav:false,soldDate:'',salePrice:0,note:'중복 없이 한 번에 획득.'},
-    {id:3,name:'이벤트 증정 키링',series:'캐릭터 키링',status:'sold',condition:2,acquired:'2026-05-01',purchasePrice:0,location:'이벤트 행사장',fav:false,soldDate:'2026-08-03',salePrice:5000,note:'이벤트 증정품. 보관만 하다가 판매 완료.'},
-    {id:4,name:'크루아상 스트랩',series:'빵 스트랩',status:'held',condition:4,acquired:'2026-08-05',purchasePrice:25000,location:'이마트 캡슐토이존',fav:false,soldDate:'',salePrice:0,note:'빵 시리즈 중 제일 마음에 들어서 보유 중.'},
-    {id:5,name:'토끼 피규어',series:'동물 피규어',status:'held',condition:3,acquired:'2026-08-07',purchasePrice:10000,location:'스타필드 가챠존',fav:false,soldDate:'',salePrice:0,note:'스타필드에서 뽑음. 상태 좋음.'},
-    {id:6,name:'판다 시크릿',series:'동물 피규어',status:'sold',condition:1,acquired:'2026-06-20',purchasePrice:10000,location:'홍대 가챠샵',fav:false,soldDate:'2026-08-10',salePrice:8000,note:'도색 상태가 아쉬워서 판매.'},
-    {id:7,name:'캐릭터 키링 A',series:'캐릭터 키링',status:'held',condition:4,acquired:'2026-08-12',purchasePrice:15000,location:'홍대 가챠샵',fav:false,soldDate:'',salePrice:0,note:'키링용으로 보유 중.'}
+    {id:1,name:'고양이 미니어처',series:'미니어처 소품',status:'held',acquired:'2026-08-02',purchasePrice:15000,location:'홍대 가챠샵',fav:true,soldDate:'',salePrice:0,note:'시크릿 노리고 여러 번 돌려서 뽑은 아이템. 포장 상태 양호.'},
+    {id:2,name:'강아지 피규어',series:'동물 피규어',status:'held',acquired:'2026-07-15',purchasePrice:5000,location:'강남 가챠샵',fav:false,soldDate:'',salePrice:0,note:'중복 없이 한 번에 획득.'},
+    {id:3,name:'이벤트 증정 키링',series:'캐릭터 키링',status:'sold',acquired:'2026-05-01',purchasePrice:0,location:'이벤트 행사장',fav:false,soldDate:'2026-08-03',salePrice:5000,note:'이벤트 증정품. 보관만 하다가 판매 완료.'},
+    {id:4,name:'크루아상 스트랩',series:'빵 스트랩',status:'held',acquired:'2026-08-05',purchasePrice:25000,location:'이마트 캡슐토이존',fav:false,soldDate:'',salePrice:0,note:'빵 시리즈 중 제일 마음에 들어서 보유 중.'},
+    {id:5,name:'토끼 피규어',series:'동물 피규어',status:'held',acquired:'2026-08-07',purchasePrice:10000,location:'스타필드 가챠존',fav:false,soldDate:'',salePrice:0,note:'스타필드에서 뽑음. 상태 좋음.'},
+    {id:6,name:'판다 시크릿',series:'동물 피규어',status:'sold',acquired:'2026-06-20',purchasePrice:10000,location:'홍대 가챠샵',fav:false,soldDate:'2026-08-10',salePrice:8000,note:'도색 상태가 아쉬워서 판매.'},
+    {id:7,name:'캐릭터 키링 A',series:'캐릭터 키링',status:'held',acquired:'2026-08-12',purchasePrice:15000,location:'홍대 가챠샵',fav:false,soldDate:'',salePrice:0,note:'키링용으로 보유 중.'}
 ];
 const SEED_SERIES=['동물 피규어','미니어처 소품','캐릭터 키링','빵 스트랩'];
-const conditionLabels={4:'최상',3:'좋음',2:'보통',1:'나쁨'};
 let mockItems=[];
 let managedSeries=[];
 let currentDate=new Date(2026,7,1);
@@ -446,14 +442,12 @@ function won(n){return Number(n||0).toLocaleString()+'원';}
 function compactCalendarMoney(n){return Number(n||0).toLocaleString();}
 function escapeHtml(str=''){return String(str).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#039;','"':'&quot;'}[c]));}
 function statusLabel(status){return status==='sold'?'💰 판매완료':'🌟 보유중';}
-function renderConditionStars(n){const v=Math.max(1,Math.min(4,Number(n)||4));return '⭐'.repeat(v)+'☆'.repeat(4-v)+' '+conditionLabels[v];}
 function normalizeItem(item){
     return {
         id:Number(item.id)||Date.now()+Math.floor(Math.random()*10000),
         name:String(item.name||''),
         series:String(item.series||managedSeries[0]||''),
         status:item.status==='sold'?'sold':'held',
-        condition:Number(item.condition)||4,
         acquired:String(item.acquired||''),
         purchasePrice:Number(item.purchasePrice||0),
         location:String(item.location||''),
@@ -470,7 +464,7 @@ function isExpenseOnlySeries(series){
         .trim()
         .replace(/^#+\s*/,'')
         .trim();
-    return normalized==='택배비';
+    return normalized==='배송비'||normalized==='택배비'||normalized==='수수료';
 }
 function saveState(){
     try{localStorage.setItem(STORAGE_KEY,JSON.stringify({mockItems,managedSeries,appTitle:getAppTitle()}));}
@@ -743,7 +737,7 @@ function renderStatsSeriesExpense(){
     const month=getSelectedStatsMonth();
     const grouped={};
 
-    // 지출 통계이므로 택배비도 포함
+    // 지출 통계이므로 배송비도 포함
     getTransactions()
         .filter(t=>t.type==='expense'&&t.date.startsWith(month))
         .forEach(t=>{
@@ -812,13 +806,13 @@ function goToAddItem(dateStr){
 function renderCollection(){
     const q=(document.getElementById('collection-search')?.value||'').trim().toLowerCase();
     const series=document.getElementById('collection-series-filter')?.value||'';
-    const filtered=mockItems.filter(p=>(!q||p.name.toLowerCase().includes(q))&&(!series||p.series===series));
+    const filtered=mockItems.filter(p=>!isExpenseOnlySeries(p.series)&&(!q||p.name.toLowerCase().includes(q))&&(!series||p.series===series));
     let html=filtered.map(p=>`<div class="card collection-card" onclick="openItemEditor(${p.id})">
         <div class="flex-between">
             <h4 style="margin:0;display:flex;align-items:center;gap:6px;min-width:0;"><span>🧸</span><span>${escapeHtml(p.name)} ${p.fav?'<span class="fav-star">⭐</span>':''}</span></h4>
             <span class="badge ${p.status}">${statusLabel(p.status)}</span>
         </div>
-        <div style="font-size:13px;color:var(--ink-soft2);margin:8px 0 0;line-height:1.6;">시리즈: <b>${escapeHtml(p.series)}</b><br>획득일: <b>${p.acquired||'-'}</b><br>컨디션: <b>${renderConditionStars(p.condition)}</b></div>
+        <div style="font-size:13px;color:var(--ink-soft2);margin:8px 0 0;line-height:1.6;">시리즈: <b>${escapeHtml(p.series)}</b><br>획득일: <b>${p.acquired||'-'}</b></div>
         <div class="muted" style="text-align:right;margin-top:7px;">눌러서 상세/수정 ›</div>
     </div>`).join('');
     if(!filtered.length)html='<p style="color:#9089AC;text-align:center;padding:20px 0;">조건에 맞는 아이템이 없습니다.</p>';
@@ -829,13 +823,10 @@ function openItemEditor(id){
     const p=mockItems.find(x=>x.id===id);if(!p)return;
     document.getElementById('sheet-title').innerText='컬렉션 상세 / 수정';
     const seriesOptions=managedSeries.map(v=>`<option ${v===p.series?'selected':''}>${escapeHtml(v)}</option>`).join('');
-    const conditionOptions=[4,3,2,1].map(v=>`<option value="${v}" ${v===Number(p.condition)?'selected':''}>${'⭐'.repeat(v)} ${conditionLabels[v]}</option>`).join('');
     const html=`
         <label class="muted">아이템 이름</label><input id="edit-name" value="${escapeHtml(p.name)}">
-        <label class="muted">시리즈</label><select id="edit-series">${seriesOptions}</select>
-        <label class="muted">상태(컨디션)</label><select id="edit-condition">${conditionOptions}</select>
-        <div style="display:flex;gap:8px;"><div style="flex:1;"><label class="muted">획득일</label><input id="edit-acquired" type="date" value="${p.acquired||''}"></div><div style="flex:1;"><label class="muted">구입금액</label><input id="edit-purchase-price" type="number" min="0" value="${Number(p.purchasePrice||0)}"></div></div>
-        <label class="muted">구입 위치</label><input id="edit-location" value="${escapeHtml(p.location||'')}">
+        <div style="display:flex;gap:8px;"><div style="flex:1;"><label class="muted">시리즈</label><select id="edit-series">${seriesOptions}</select></div><div style="flex:1;"><label class="muted">구입금액</label><input id="edit-purchase-price" type="number" min="0" value="${Number(p.purchasePrice||0)}"></div></div>
+        <div style="display:flex;gap:8px;"><div style="flex:1;"><label class="muted">획득일</label><input id="edit-acquired" type="date" value="${p.acquired||''}"></div><div style="flex:1;"><label class="muted">구입 위치</label><input id="edit-location" value="${escapeHtml(p.location||'')}"></div></div>
         <label class="muted">메모 / 상세설명</label><textarea id="edit-note" rows="4" placeholder="아이템에 대한 간단한 메모를 남겨보세요." style="resize:vertical;">${escapeHtml(p.note||'')}</textarea>
         <label class="muted">보유 여부</label><select id="edit-status" onchange="toggleEditSaleFields()"><option value="held" ${p.status==='held'?'selected':''}>🌟 보유중</option><option value="sold" ${p.status==='sold'?'selected':''}>💰 판매완료</option></select>
         <div id="edit-sale-fields" style="display:${p.status==='sold'?'flex':'none'};gap:8px;"><div style="flex:1;"><label class="muted">판매일</label><input id="edit-sold-date" type="date" value="${p.soldDate||''}"></div><div style="flex:1;"><label class="muted">판매금액</label><input id="edit-sale-price" type="number" min="0" value="${Number(p.salePrice||0)}"></div></div>
@@ -844,12 +835,10 @@ function openItemEditor(id){
     openSheet(html);
 }
 function toggleEditSaleFields(){const sold=document.getElementById('edit-status').value==='sold';document.getElementById('edit-sale-fields').style.display=sold?'flex':'none';}
-function toggleNewSaleFields(){const sold=document.getElementById('new-status').value==='sold';document.getElementById('new-sale-fields').style.display=sold?'flex':'none';}
 function saveCollectionItem(id){
     const p=mockItems.find(x=>x.id===id);if(!p)return;
     p.name=document.getElementById('edit-name').value.trim()||p.name;
     p.series=document.getElementById('edit-series').value;
-    p.condition=Number(document.getElementById('edit-condition').value);
     p.acquired=document.getElementById('edit-acquired').value;
     p.purchasePrice=Number(document.getElementById('edit-purchase-price').value||0);
     p.location=document.getElementById('edit-location').value.trim();
@@ -863,16 +852,15 @@ function saveCollectionItem(id){
 function deleteCollectionItem(id){if(!confirm('이 아이템을 삭제할까요?'))return;mockItems=mockItems.filter(x=>x.id!==id);saveState();closeSheet();renderAll();}
 function addCollectionItem(){
     const name=document.getElementById('new-name').value.trim();if(!name){alert('아이템 이름을 입력해주세요.');return;}
-    const status=document.getElementById('new-status').value;
     mockItems.unshift({
-        id:Date.now(),name,series:document.getElementById('new-series').value,status,
-        condition:Number(document.getElementById('new-condition').value),acquired:document.getElementById('new-acquired').value,
+        id:Date.now(),name,series:document.getElementById('new-series').value,status:'held',
+        acquired:document.getElementById('new-acquired').value,
         purchasePrice:Number(document.getElementById('new-purchase-price').value||0),location:document.getElementById('new-location').value.trim(),
         note:document.getElementById('new-note').value.trim(),fav:document.getElementById('new-fav').checked,
-        soldDate:status==='sold'?document.getElementById('new-sold-date').value:'',salePrice:status==='sold'?Number(document.getElementById('new-sale-price').value||0):0
+        soldDate:'',salePrice:0
     });
-    ['new-name','new-purchase-price','new-location','new-note','new-sold-date','new-sale-price'].forEach(id=>document.getElementById(id).value='');
-    document.getElementById('new-status').value='held';document.getElementById('new-fav').checked=false;toggleNewSaleFields();
+    ['new-name','new-purchase-price','new-location','new-note'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('new-fav').checked=false;
     saveState();renderAll();toggleNewItemForm();
 }
 
@@ -881,7 +869,7 @@ function renderTotalStats(){
     // 아이템 이름에 #이 들어간 데이터는 전체 통계에서 제외
     const visibleItems=mockItems.filter(item=>!isHiddenItem(item));
 
-    // 재무 합계는 배송비/택배비도 실제 지출이므로 포함
+    // 재무 합계는 배송비도 실제 지출이므로 포함
     const visibleTx=[];
     visibleItems.forEach(item=>{
         if(item.acquired&&Number(item.purchasePrice)>0){
@@ -914,7 +902,7 @@ function renderTotalStats(){
         .filter(t=>t.type==='income')
         .reduce((sum,t)=>sum+Number(t.amount||0),0);
 
-    // 뽑기 수/평균 지출에서는 비용 전용 시리즈(택배비/#택배비) 제외
+    // 뽑기 수/평균 지출에서는 비용 전용 시리즈(배송비/#배송비) 제외
     const pullItems=visibleItems.filter(item=>!isExpenseOnlySeries(item.series));
     const pullSpend=pullItems.reduce((sum,item)=>sum+Number(item.purchasePrice||0),0);
 
@@ -985,8 +973,8 @@ function renderStats(){
     const month=getSelectedStatsMonth();
     renderStatsSeriesExpense();
 
-    // '#' 아이템과 '택배비'는 컬렉션/시리즈 통계에서 제외
-    // 택배비는 getTransactions()에는 남아 달력/뽑기기록 지출 합계에는 포함됩니다.
+    // '#' 아이템은 지출/통계에서 제외합니다.
+    // 배송비/택배비/수수료는 컬렉션 집계에서는 제외하지만 실제 지출 통계에는 포함합니다.
     const monthItems=mockItems.filter(p=>
         !isHiddenItem(p) &&
         !isExpenseOnlySeries(p.series) &&
@@ -1000,7 +988,7 @@ function renderStats(){
 
     const expByCat={};
     getTransactions()
-        .filter(t=>t.type==='expense'&&t.date.startsWith(month)&&!isExpenseOnlySeries(t.category))
+        .filter(t=>t.type==='expense'&&t.date.startsWith(month))
         .forEach(t=>expByCat[t.category]=(expByCat[t.category]||0)+t.amount);
 
     const canvas=document.getElementById('expensePieChart');
@@ -1038,7 +1026,7 @@ function renderSeriesControls(){
     const newSelect=document.getElementById('new-series');
     if(newSelect){const prev=newSelect.value;newSelect.innerHTML=managedSeries.map(v=>`<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');if(managedSeries.includes(prev))newSelect.value=prev;}
     const filter=document.getElementById('collection-series-filter');
-    if(filter){const prev=filter.value;filter.innerHTML='<option value="">📁 시리즈 전체보기</option>'+managedSeries.map(v=>`<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');filter.value=managedSeries.includes(prev)?prev:'';}
+    if(filter){const prev=filter.value;const collectionSeries=managedSeries.filter(v=>!isExpenseOnlySeries(v));filter.innerHTML='<option value="">📁 전체 시리즈</option>'+collectionSeries.map(v=>`<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');filter.value=collectionSeries.includes(prev)?prev:'';}
 }
 function renderSeriesManager(){
     const list=document.getElementById('series-manage-list');
@@ -1134,7 +1122,6 @@ async function exportExcel(){
             {header:'구입금액',key:'purchasePrice',width:14},
             {header:'구입위치',key:'location',width:22},
             {header:'보유상태',key:'status',width:12},
-            {header:'컨디션',key:'condition',width:10},
             {header:'판매일',key:'soldDate',width:14},
             {header:'판매금액',key:'salePrice',width:14},
             {header:'최애',key:'fav',width:8},
@@ -1148,7 +1135,6 @@ async function exportExcel(){
             purchasePrice:Number(p.purchasePrice||0),
             location:p.location||'',
             status:p.status==='sold'?'판매완료':'보유중',
-            condition:Number(p.condition||4),
             soldDate:p.soldDate||'',
             salePrice:Number(p.salePrice||0),
             fav:p.fav?'Y':'N',
@@ -1198,7 +1184,7 @@ async function exportExcel(){
         }
 
         // 엑셀에서 새 행을 추가해 다시 업로드할 수 있도록 빈 행의 모양도 유지
-        collectionSheet.autoFilter={from:'A1',to:'K1'};
+        collectionSheet.autoFilter={from:'A1',to:'J1'};
 
         const buffer=await wb.xlsx.writeBuffer();
         const blob=new Blob([buffer],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
@@ -1218,7 +1204,6 @@ async function exportExcel(){
 
 function parseFav(v){return ['Y','YES','TRUE','1','최애'].includes(String(v??'').trim().toUpperCase());}
 function parseStatus(v){return String(v??'').includes('판매')?'sold':'held';}
-function parseCondition(v){const n=Number(String(v??'').match(/[1-4]/)?.[0]);return n>=1&&n<=4?n:4;}
 function excelDateToString(v){
     if(!v)return'';
     if(typeof v==='number'&&typeof XLSX!=='undefined'&&XLSX.SSF){const d=XLSX.SSF.parse_date_code(v);if(d)return`${d.y}-${String(d.m).padStart(2,'0')}-${String(d.d).padStart(2,'0')}`;}
@@ -1239,7 +1224,7 @@ function importExcel(event){
             const imported=rows.filter(r=>String(r['아이템명']||'').trim()).map((r,i)=>({
                 id:Date.now()+i,name:String(r['아이템명']).trim(),series:String(r['시리즈']||'미분류').trim(),
                 acquired:excelDateToString(r['획득일']),purchasePrice:Number(r['구입금액']||0),location:String(r['구입위치']||'').trim(),
-                status:parseStatus(r['보유상태']),condition:parseCondition(r['컨디션']),soldDate:excelDateToString(r['판매일']),salePrice:Number(r['판매금액']||0),
+                status:parseStatus(r['보유상태']),soldDate:excelDateToString(r['판매일']),salePrice:Number(r['판매금액']||0),
                 fav:parseFav(r['최애']),note:String(r['메모']||'').trim()
             }));
             const seriesSheet=wb.Sheets['시리즈'];
