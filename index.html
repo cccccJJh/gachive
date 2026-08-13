@@ -332,6 +332,7 @@ button.secondary{background:#8A84A8;}
                 <span>💰 누적 순지출</span>
                 <span id="total-stat-net" class="num">0원</span>
             </div>
+            <p class="muted" style="margin:10px 0 0;text-align:center;">#이 포함된 아이템은 전체 통계에서 제외됩니다.</p>
         </div>
 
         <div class="card">
@@ -382,6 +383,15 @@ button.secondary{background:#8A84A8;}
             <div class="backup-row">
                 <button class="secondary" onclick="exportData()">JSON 다운로드</button>
                 <label class="file-button">JSON 업로드<input type="file" id="import-file-input" accept="application/json,.json" onchange="importData(event)"></label>
+            </div>
+
+            <div style="margin-top:12px;padding-top:12px;border-top:1px dashed var(--line);">
+                <label class="muted" for="json-text-input">JSON 텍스트로 불러오기</label>
+                <textarea id="json-text-input" rows="6"
+                    placeholder='{"mockItems":[...],"managedSeries":[...],"appTitle":"Gachive"}'
+                    style="margin:6px 0 8px;resize:vertical;font-family:'Space Mono',monospace;font-size:12px;"></textarea>
+                <button class="secondary" onclick="importJsonText()" style="width:100%;">붙여넣은 JSON 불러오기</button>
+                <p class="muted" style="margin:8px 0 0;">※ 현재 데이터가 붙여넣은 JSON 내용으로 교체됩니다.</p>
             </div>
         </div>
         <div class="card" style="border:2px solid var(--coin-red);">
@@ -1249,6 +1259,52 @@ function importData(event){
     reader.onload=e=>{try{const data=JSON.parse(e.target.result);if(Array.isArray(data.managedSeries)&&data.managedSeries.length)managedSeries=data.managedSeries;if(Array.isArray(data.mockItems))mockItems=data.mockItems.map(normalizeItem);if(data.appTitle)document.querySelector('header .title').innerHTML=`🧸 ${escapeHtml(data.appTitle)}`;saveState();renderAll();alert('데이터를 불러왔습니다.');}catch(err){alert('JSON 파일을 읽는 중 오류가 발생했습니다.');}event.target.value='';};
     reader.readAsText(file);
 }
+
+function importJsonText(){
+    const input=document.getElementById('json-text-input');
+    const raw=(input?.value||'').trim();
+
+    if(!raw){
+        alert('JSON 내용을 붙여넣어 주세요.');
+        return;
+    }
+
+    if(!confirm('붙여넣은 JSON 내용으로 현재 데이터를 교체할까요?')){
+        return;
+    }
+
+    try{
+        const data=JSON.parse(raw);
+
+        if(!data || typeof data!=='object'){
+            throw new Error('올바른 JSON 객체가 아닙니다.');
+        }
+
+        if(Array.isArray(data.managedSeries) && data.managedSeries.length){
+            managedSeries=data.managedSeries.slice();
+        }
+
+        if(Array.isArray(data.mockItems)){
+            mockItems=data.mockItems.map(normalizeItem);
+        }else{
+            throw new Error('mockItems 데이터가 없습니다.');
+        }
+
+        if(data.appTitle){
+            document.querySelector('header .title').innerHTML=`🧸 ${escapeHtml(data.appTitle)}`;
+        }
+
+        saveState();
+        renderAll();
+
+        input.value='';
+        alert(`${mockItems.length}개의 컬렉션 데이터를 불러왔습니다.`);
+    }catch(err){
+        console.error(err);
+        alert('JSON 형식을 읽지 못했습니다. Gachive JSON 백업 내용을 그대로 붙여넣었는지 확인해주세요.');
+    }
+}
+
 function resetAllData(){if(!confirm('기본 예시 데이터로 초기화할까요?'))return;managedSeries=SEED_SERIES.slice();mockItems=cloneSeedItems();document.querySelector('header .title').innerHTML=`🧸 ${DEFAULT_TITLE}`;saveState();renderAll();alert('기본 데이터로 초기화되었습니다.');}
 
 function renderAll(){
