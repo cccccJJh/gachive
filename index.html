@@ -151,6 +151,192 @@ button.secondary{background:#8A84A8;}
     .summary-box{padding:8px 4px;}
     .summary-box .value{font-size:11px;}
 }
+
+/* ===== Mobile compact layout ===== */
+@media (max-width: 420px){
+    html{
+        -webkit-text-size-adjust:100%;
+        text-size-adjust:100%;
+    }
+
+    body{
+        font-size:14px;
+        padding-bottom:92px;
+    }
+
+    header{
+        padding:13px 16px 9px;
+    }
+
+    header .title{
+        font-size:18px;
+    }
+
+    .tab-content{
+        padding:10px;
+    }
+
+    .card{
+        padding:12px;
+        border-radius:15px;
+        margin-bottom:10px;
+    }
+
+    h3{
+        font-size:18px;
+    }
+
+    h4{
+        font-size:15px;
+    }
+
+    .muted{
+        font-size:10px;
+    }
+
+    input,
+    select,
+    textarea{
+        min-width:0;
+        padding:9px 10px;
+        margin:4px 0;
+        border-radius:10px;
+        font-size:13px;
+        line-height:1.35;
+    }
+
+    textarea{
+        min-height:74px;
+    }
+
+    button{
+        padding:10px;
+        border-radius:10px;
+        font-size:12px;
+    }
+
+    /* flex 안의 입력폼이 화면 밖으로 밀려나지 않도록 */
+    .accordion-body-inner > div[style*="display:flex"] > div,
+    #sheet-content > div[style*="display:flex"] > div,
+    .card > div[style*="display:flex"] > div{
+        min-width:0;
+    }
+
+    .accordion-body-inner{
+        padding-top:10px;
+    }
+
+    .accordion-body-inner label,
+    #sheet-content label{
+        font-size:11px !important;
+    }
+
+    .summary-grid{
+        gap:6px;
+    }
+
+    .summary-box{
+        padding:9px 5px;
+        border-radius:10px;
+    }
+
+    .summary-box .label{
+        font-size:10px;
+    }
+
+    .summary-box .value{
+        font-size:11px;
+    }
+
+    .stat-pill{
+        padding:9px 10px;
+        border-radius:10px;
+        gap:6px;
+    }
+
+    .stat-pill .num{
+        font-size:14px;
+    }
+
+    .item-row{
+        padding:9px 0;
+        gap:6px;
+    }
+
+    .item-row b{
+        font-size:14px;
+    }
+
+    .badge{
+        padding:3px 7px;
+        font-size:9px;
+        border-radius:7px;
+    }
+
+    /* 뽑기기록 필터 */
+    #ledger-type-filter{
+        margin-bottom:8px !important;
+    }
+
+    #ledger-type-filter .sub-tab-item,
+    #tab-stats > .sub-tab .sub-tab-item{
+        padding:7px 4px;
+        font-size:11px !important;
+    }
+
+    #ledger-year-filter,
+    #ledger-month-filter,
+    #stats-year-filter,
+    #stats-month-filter,
+    #sale-stats-year-filter,
+    #sale-stats-month-filter,
+    #ledger-series-filter{
+        padding:6px 8px !important;
+        font-size:11px !important;
+    }
+
+    /* 컬렉션 검색 영역 */
+    #collection-search{
+        font-size:13px;
+    }
+
+    #collection-filter-panel{
+        padding:8px !important;
+    }
+
+    /* 상세/수정/판매 바텀시트 */
+    .bottom-sheet{
+        padding:14px 12px 26px;
+        max-height:86%;
+    }
+
+    #sheet-title{
+        font-size:18px;
+        margin-bottom:10px;
+    }
+
+    #sheet-content{
+        font-size:13px;
+    }
+
+    #sheet-content .form-actions{
+        gap:6px;
+    }
+
+    #sheet-content .form-actions button{
+        padding:10px 8px;
+    }
+
+    .bottom-nav .nav-item{
+        padding:9px 0 8px;
+        font-size:10px;
+    }
+
+    .bottom-nav .nav-item div{
+        font-size:16px;
+    }
+}
+
 </style>
 </head>
 <body>
