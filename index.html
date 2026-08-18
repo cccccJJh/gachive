@@ -203,11 +203,16 @@ button.secondary{background:#8A84A8;}
         <p class="muted" style="margin:10px 0 0;text-align:center;">컬렉션의 구입·판매 정보를 기준으로 자동 집계되는 조회 전용 화면입니다.</p>
     </div>
 <div class="card">
-        <div class="flex-between" style="margin-bottom:10px;gap:8px;">
+        <div class="flex-between" style="margin-bottom:8px;gap:8px;flex-wrap:wrap;">
             <h4 id="ledger-list-title" style="margin:0;">8월 전체 내역</h4>
             <select id="ledger-series-filter" onchange="renderLedgerList()" style="width:auto;max-width:160px;margin:0;padding:6px 8px;font-size:12px;">
                 <option value="">전체 시리즈</option>
             </select>
+        </div>
+        <div id="ledger-type-filter" class="sub-tab" style="margin-bottom:10px;">
+            <div class="sub-tab-item active" onclick="setLedgerTypeFilter('all',this)">전체</div>
+            <div class="sub-tab-item" onclick="setLedgerTypeFilter('expense',this)">구매</div>
+            <div class="sub-tab-item" onclick="setLedgerTypeFilter('income',this)">판매</div>
         </div>
         <ul id="ledger-list" class="item-list"></ul>
     </div>
@@ -226,12 +231,15 @@ button.secondary{background:#8A84A8;}
                     <input id="new-name" type="text" placeholder="예: 고양이 미니어처" style="margin:2px 0 0;">
                 </div>
                 <div style="display:flex;gap:8px;margin-bottom:8px;">
-                    <div style="flex:1;"><label class="muted">시리즈</label><select id="new-series" style="margin:2px 0 0;"></select></div>
-                    <div style="flex:1;"><label class="muted">구입금액</label><input id="new-purchase-price" type="number" min="0" placeholder="금액" style="margin:2px 0 0;"></div>
+                    <div style="flex:1.4;"><label class="muted">시리즈</label><select id="new-series" style="margin:2px 0 0;"></select></div>
+                    <div style="flex:.6;"><label class="muted">등록 수량</label><input id="new-quantity" type="number" min="1" step="1" value="1" style="margin:2px 0 0;"></div>
                 </div>
                 <div style="display:flex;gap:8px;margin-bottom:8px;">
+                    <div style="flex:1;"><label class="muted">구입금액 (총액)</label><input id="new-purchase-price" type="number" min="0" placeholder="예: 20000" style="margin:2px 0 0;"></div>
                     <div style="flex:1;"><label class="muted">획득일</label><input id="new-acquired" type="date" value="2026-08-12" style="margin:2px 0 0;"></div>
-                    <div style="flex:1;"><label class="muted">구입 위치</label><input id="new-location" type="text" placeholder="예: 홍대 가챠샵" style="margin:2px 0 0;"></div>
+                </div>
+                <div style="margin-bottom:8px;">
+                    <label class="muted">구입 위치</label><input id="new-location" type="text" placeholder="예: 홍대 가챠샵" style="margin:2px 0 0;">
                 </div>
                 <div style="margin-bottom:14px;">
                     <label class="muted">메모 / 상세설명</label>
@@ -248,9 +256,22 @@ button.secondary{background:#8A84A8;}
             <h4 style="margin:0;">컬렉션 검색 🦄</h4>
             <button onclick="resetCollectionFilter()" style="padding:4px 10px;font-size:11px;background:#8A84A8;border-radius:8px;">초기화</button>
         </div>
-        <div style="display:flex;gap:8px;margin-bottom:15px;">
-            <input id="collection-search" oninput="renderCollection()" type="text" placeholder="이름으로 검색..." style="margin:0;flex:1.3;">
-            <select id="collection-series-filter" onchange="renderCollection()" style="margin:0;font-size:13px;flex:1;"><option value="">📁 전체 시리즈</option></select>
+        <div style="display:flex;gap:8px;margin-bottom:10px;">
+            <input id="collection-search" oninput="renderCollection()" type="text" placeholder="이름 또는 시리즈 검색..." style="margin:0;flex:1;">
+            <button class="secondary" onclick="toggleCollectionFilterPanel()" style="width:auto;padding:8px 12px;flex:none;">🔎 필터</button>
+        </div>
+        <div id="collection-filter-panel" style="display:none;background:#FAF8FE;border:1px solid var(--line);border-radius:12px;padding:10px;margin-bottom:15px;">
+            <div style="display:flex;gap:8px;">
+                <select id="collection-status-filter" onchange="renderCollection()" style="margin:0;flex:1;font-size:12px;">
+                    <option value="">전체 상태</option>
+                    <option value="held">보유중</option>
+                    <option value="sold">판매완료</option>
+                    <option value="fav">⭐ 최애</option>
+                </select>
+                <select id="collection-series-filter" onchange="renderCollection()" style="margin:0;flex:1;font-size:12px;">
+                    <option value="">📁 전체 시리즈</option>
+                </select>
+            </div>
         </div>
         <div id="plant-container"></div>
     </div>
@@ -259,9 +280,10 @@ button.secondary{background:#8A84A8;}
 <!-- 4. 통계 -->
 <div id="tab-stats" class="tab-content">
     <div class="sub-tab">
-        <div class="sub-tab-item active" onclick="switchStatsTab('expense', this)">지출 통계</div>
-        <div class="sub-tab-item" onclick="switchStatsTab('total', this)">전체 통계</div>
-        <div class="sub-tab-item" onclick="switchStatsTab('collection', this)">컬렉션</div>
+        <div class="sub-tab-item active" style="font-size:11px;" onclick="switchStatsTab('expense', this)">구매 통계</div>
+        <div class="sub-tab-item" style="font-size:11px;" onclick="switchStatsTab('sale', this)">판매 통계</div>
+        <div class="sub-tab-item" style="font-size:11px;" onclick="switchStatsTab('total', this)">전체 통계</div>
+        <div class="sub-tab-item" style="font-size:11px;" onclick="switchStatsTab('collection', this)">컬렉션</div>
     </div>
 
     <div id="stats-expense-tab" class="sub-content active">
@@ -279,29 +301,81 @@ button.secondary{background:#8A84A8;}
 
         <div class="card" style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;">
             <div class="stat-pill">
-                <span>🎟️ 이번달 뽑기 횟수(추정)</span>
-                <span class="num" id="stat-pull-count">0회</span>
+                <span>🛒 구매 수량</span>
+                <span class="num" id="stat-pull-count">0개</span>
             </div>
             <div class="stat-pill">
-                <span>💸 뽑기당 평균 지출</span>
+                <span>💳 총 구매금액</span>
+                <span class="num" id="stat-total-purchase">0원</span>
+            </div>
+            <div class="stat-pill">
+                <span>💸 개당 평균 구매금액</span>
                 <span class="num" id="stat-avg-spend">0원</span>
             </div>
         </div>
 
         <div class="card">
             <div class="flex-between" style="margin-bottom:10px;">
-                <h4 style="margin:0;">시리즈별 지출</h4>
+                <h4 style="margin:0;">시리즈별 구매금액</h4>
                 <span class="muted">선택한 월 기준</span>
             </div>
             <div id="stats-series-expense-list"></div>
         </div>
 
         <div class="card">
-            <h4 style="margin:0 0 10px 0;">시리즈별 지출 비율</h4>
+            <h4 style="margin:0 0 10px 0;">시리즈별 구매 비율</h4>
             <div style="max-width:250px;margin:0 auto;">
                 <canvas id="expensePieChart"></canvas>
             </div>
             <div id="expense-chart-fallback" class="muted" style="display:none;text-align:center;padding:20px 0;">
+                차트 라이브러리를 불러오지 못했습니다.
+            </div>
+        </div>
+    </div>
+
+
+    <div id="stats-sale-tab" class="sub-content">
+        <div class="card flex-between" style="margin-bottom:14px;gap:8px;flex-wrap:wrap;">
+            <h4 style="margin:0;">통계 기간</h4>
+            <div style="display:flex;gap:6px;align-items:center;">
+                <select id="sale-stats-year-filter" onchange="renderSaleStatsMonthOptions();renderSaleStats();" style="width:auto;margin:0;padding:6px 8px;font-size:12px;">
+                    <option value="">연도</option>
+                </select>
+                <select id="sale-stats-month-filter" onchange="renderSaleStats();" style="width:auto;margin:0;padding:6px 8px;font-size:12px;">
+                    <option value="">월</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="card" style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;">
+            <div class="stat-pill">
+                <span>💰 판매 수량</span>
+                <span class="num" id="sale-stat-count">0개</span>
+            </div>
+            <div class="stat-pill">
+                <span>💵 총 판매금액</span>
+                <span class="num" id="sale-stat-total">0원</span>
+            </div>
+            <div class="stat-pill">
+                <span>🏷️ 개당 평균 판매금액</span>
+                <span class="num" id="sale-stat-avg">0원</span>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="flex-between" style="margin-bottom:10px;">
+                <h4 style="margin:0;">시리즈별 판매금액</h4>
+                <span class="muted">선택한 월 기준</span>
+            </div>
+            <div id="sale-stats-series-list"></div>
+        </div>
+
+        <div class="card">
+            <h4 style="margin:0 0 10px 0;">시리즈별 판매 비율</h4>
+            <div style="max-width:250px;margin:0 auto;">
+                <canvas id="salePieChart"></canvas>
+            </div>
+            <div id="sale-chart-fallback" class="muted" style="display:none;text-align:center;padding:20px 0;">
                 차트 라이브러리를 불러오지 못했습니다.
             </div>
         </div>
@@ -446,6 +520,8 @@ let mockItems=[];
 let managedSeries=[];
 let currentDate=new Date(2026,7,1);
 let expensePieChart=null;
+let salePieChart=null;
+let ledgerTypeFilter='all';
 
 function cloneSeedItems(){return SEED_ITEMS.map(v=>({...v}));}
 function won(n){return Number(n||0).toLocaleString()+'원';}
@@ -453,20 +529,75 @@ function compactCalendarMoney(n){return Number(n||0).toLocaleString();}
 function escapeHtml(str=''){return String(str).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#039;','"':'&quot;'}[c]));}
 function statusLabel(status){return status==='sold'?'💰 판매완료':'🌟 보유중';}
 function normalizeItem(item){
-    return {
+    let quantity=Math.max(1,Math.floor(Number(item.quantity||item.qty||1)));
+
+    let sales=[];
+    if(Array.isArray(item.sales)){
+        sales=item.sales.map((sale,index)=>({
+            id:Number(sale.id)||Date.now()+index+Math.floor(Math.random()*10000),
+            date:String(sale.date||sale.soldDate||''),
+            quantity:Math.max(1,Math.floor(Number(sale.quantity||sale.qty||1))),
+            amount:Number(sale.amount??sale.salePrice??0),
+            note:String(sale.note||sale.memo||'')
+        })).filter(sale=>sale.date);
+    }else if(item.status==='sold'&&item.soldDate){
+        // 기존 버전의 판매완료 데이터는 전량 판매 1건으로 자동 마이그레이션
+        sales=[{
+            id:Date.now()+Math.floor(Math.random()*10000),
+            date:String(item.soldDate),
+            quantity,
+            amount:Number(item.salePrice||0),
+            note:'' 
+        }];
+    }
+
+    const soldQty=sales.reduce((sum,sale)=>sum+Number(sale.quantity||0),0);
+    if(soldQty>quantity)quantity=soldQty;
+
+    const normalized={
         id:Number(item.id)||Date.now()+Math.floor(Math.random()*10000),
         name:String(item.name||''),
         series:String(item.series||managedSeries[0]||''),
-        status:item.status==='sold'?'sold':'held',
+        quantity,
         acquired:String(item.acquired||''),
         purchasePrice:Number(item.purchasePrice||0),
         location:String(item.location||''),
         fav:Boolean(item.fav),
-        soldDate:String(item.soldDate||''),
-        salePrice:Number(item.salePrice||0),
+        sales,
         note:String(item.note||'')
     };
+
+    syncItemSaleState(normalized);
+    return normalized;
 }
+
+function getSoldQuantity(item){
+    return (Array.isArray(item?.sales)?item.sales:[])
+        .reduce((sum,sale)=>sum+Number(sale.quantity||0),0);
+}
+function getStockQuantity(item){
+    return Math.max(0,Number(item?.quantity||1)-getSoldQuantity(item));
+}
+function getTotalSaleAmount(item){
+    return (Array.isArray(item?.sales)?item.sales:[])
+        .reduce((sum,sale)=>sum+Number(sale.amount||0),0);
+}
+function syncItemSaleState(item){
+    const stock=getStockQuantity(item);
+    const sales=Array.isArray(item.sales)?item.sales:[];
+    item.status=stock===0?'sold':'held';
+    item.soldDate=sales.length
+        ? sales.map(s=>String(s.date||'')).filter(Boolean).sort().at(-1)||''
+        : '';
+    item.salePrice=getTotalSaleAmount(item);
+    return item;
+}
+function saleHistoryLabel(item){
+    const sold=getSoldQuantity(item);
+    const stock=getStockQuantity(item);
+    return `재고 ${stock}개 / 등록 ${Number(item.quantity||1)}개${sold?` / 판매 ${sold}개`:''}`;
+}
+
 function getAppTitle(){return document.querySelector('header .title').textContent.replace(/^🧸\s*/,'').trim()||DEFAULT_TITLE;}
 function isHiddenItem(item){return String(item?.name||'').includes('#');}
 function isExpenseOnlySeries(series){
@@ -492,19 +623,42 @@ function loadState(){
         }
     }catch(e){console.warn('불러오기 실패, 기본 데이터 사용:',e);}
     managedSeries=SEED_SERIES.slice();
-    mockItems=cloneSeedItems();
+    mockItems=cloneSeedItems().map(normalizeItem);
 }
 
 function getTransactions(){
     const tx=[];
     mockItems.forEach(item=>{
         if(isHiddenItem(item))return;
+
+        const qty=Math.max(1,Number(item.quantity||1));
         if(item.acquired&&Number(item.purchasePrice)>0){
-            tx.push({date:item.acquired,type:'expense',category:item.series,itemName:item.name,amount:Number(item.purchasePrice),location:item.location||''});
+            tx.push({
+                date:item.acquired,
+                type:'expense',
+                category:item.series,
+                itemName:item.name,
+                quantity:qty,
+                amount:Number(item.purchasePrice),
+                location:item.location||'',
+                note:''
+            });
         }
-        if(item.status==='sold'&&item.soldDate&&Number(item.salePrice)>0){
-            tx.push({date:item.soldDate,type:'income',category:item.series,itemName:item.name,amount:Number(item.salePrice),location:'판매'});
-        }
+
+        (Array.isArray(item.sales)?item.sales:[]).forEach(sale=>{
+            if(!sale.date)return;
+            tx.push({
+                date:sale.date,
+                type:'income',
+                category:item.series,
+                itemName:item.name,
+                quantity:Number(sale.quantity||1),
+                amount:Number(sale.amount||0),
+                note:String(sale.note||''),
+                location:'판매',
+                note:String(sale.note||'')
+            });
+        });
     });
     return tx.sort((a,b)=>b.date.localeCompare(a.date));
 }
@@ -528,8 +682,12 @@ function switchStatsTab(tab,el){
 
     if(tab==='expense'){
         setTimeout(renderStats,0);
+    }else if(tab==='sale'){
+        setTimeout(renderSaleStats,0);
     }else if(tab==='total'){
         setTimeout(renderTotalStats,0);
+    }else if(tab==='collection'){
+        setTimeout(renderStats,0);
     }
 }
 
@@ -584,7 +742,7 @@ function openDateSheet(dateStr){
     const dayTx=getTransactions().filter(t=>t.date===dateStr);
     let html='<ul class="item-list">';
     dayTx.forEach(t=>{
-        html+=`<li class="item-row"><div><span class="badge ${t.type==='expense'?'exp':'inc'}">${t.type==='expense'?'지출':'수입'}</span> <b>${escapeHtml(t.itemName)}</b><br><span class="muted">${escapeHtml(t.category)}${t.location?' · 📍'+escapeHtml(t.location):''}</span></div><div class="mono" style="color:var(--${t.type==='expense'?'coin-red':'coin-teal'})">${t.type==='expense'?'-':'+'}${won(t.amount)}</div></li>`;
+        html+=`<li class="item-row"><div><span class="badge ${t.type==='expense'?'exp':'inc'}">${t.type==='expense'?'지출':'수입'}</span> <b>${escapeHtml(t.itemName)}${Number(t.quantity||1)>1?` ×${Number(t.quantity)}`:''}</b><br><span class="muted">${escapeHtml(t.category)}${t.location?' · 📍'+escapeHtml(t.location):''}</span></div><div class="mono" style="color:var(--${t.type==='expense'?'coin-red':'coin-teal'})">${t.type==='expense'?'-':'+'}${won(t.amount)}</div></li>`;
     });
     if(!dayTx.length)html+='<p style="color:#9089AC;text-align:center;padding:20px 0;">기록된 내역이 없습니다.</p>';
     html+='</ul>';
@@ -672,7 +830,10 @@ function renderLedgerSeriesFilter(){
 
     const seriesList=[...new Set(
         getTransactions()
-            .filter(t=>t.date.startsWith(month))
+            .filter(t=>
+                t.date.startsWith(month) &&
+                (ledgerTypeFilter==='all'||t.type===ledgerTypeFilter)
+            )
             .map(t=>t.category)
             .filter(Boolean)
     )].sort((a,b)=>a.localeCompare(b,'ko'));
@@ -683,12 +844,22 @@ function renderLedgerSeriesFilter(){
     select.value=(previous&&seriesList.includes(previous))?previous:'';
 }
 
+
+function getPurchaseStatsAvailableMonths(){
+    return [...new Set(
+        getTransactions()
+            .filter(t=>t.type==='expense')
+            .map(t=>String(t.date||'').slice(0,7))
+            .filter(v=>/^\d{4}-\d{2}$/.test(v))
+    )].sort((a,b)=>b.localeCompare(a));
+}
+
 function renderStatsYearFilter(){
     const yearSelect=document.getElementById('stats-year-filter');
     if(!yearSelect)return;
 
     const previous=yearSelect.value;
-    const availableMonths=getLedgerAvailableMonths();
+    const availableMonths=getPurchaseStatsAvailableMonths();
     const years=[...new Set(availableMonths.map(v=>v.slice(0,4)))].sort((a,b)=>b.localeCompare(a));
 
     const currentYear=localTodayString().slice(0,4);
@@ -712,7 +883,7 @@ function renderStatsMonthOptions(){
 
     const year=yearSelect.value;
     const previous=monthSelect.value;
-    const availableMonths=getLedgerAvailableMonths()
+    const availableMonths=getPurchaseStatsAvailableMonths()
         .filter(v=>v.startsWith(year+'-'))
         .map(v=>v.slice(5,7))
         .sort((a,b)=>Number(b)-Number(a));
@@ -777,22 +948,48 @@ function renderStatsSeriesExpense(){
     }).join('');
 }
 
+
+function setLedgerTypeFilter(type,el){
+    ledgerTypeFilter=type;
+    const container=document.getElementById('ledger-type-filter');
+    container?.querySelectorAll('.sub-tab-item').forEach(i=>i.classList.remove('active'));
+    el?.classList.add('active');
+    renderLedgerSeriesFilter();
+    renderLedgerList();
+}
+
 function renderLedgerList(){
     const month=getSelectedLedgerMonth();
     const [year,mon]=month.split('-');
-    document.getElementById('ledger-summary-title').innerText=`${year}년 ${Number(mon)}월 요약`;
-    document.getElementById('ledger-list-title').innerText=`${Number(mon)}월 전체 내역`;
     const selectedSeries=document.getElementById('ledger-series-filter')?.value||'';
+
+    const label=ledgerTypeFilter==='expense'?'구매':ledgerTypeFilter==='income'?'판매':'전체';
+    document.getElementById('ledger-summary-title').innerText=`${year}년 ${Number(mon)}월 요약`;
+    document.getElementById('ledger-list-title').innerText=`${Number(mon)}월 ${label} 내역`;
+
     const tx=getTransactions().filter(t=>
         t.date.startsWith(month)&&
+        (ledgerTypeFilter==='all'||t.type===ledgerTypeFilter)&&
         (!selectedSeries||t.category===selectedSeries)
     );
+
     const expense=tx.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
     const income=tx.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0);
     document.getElementById('ledger-income').innerText=won(income);
     document.getElementById('ledger-expense').innerText=won(expense);
     document.getElementById('ledger-net').innerText=won(expense-income);
-    document.getElementById('ledger-list').innerHTML=tx.length?tx.map(t=>`<li class="item-row"><div><span class="badge ${t.type==='expense'?'exp':'inc'}">${t.type==='expense'?'지출':'수입'}</span> <b>${escapeHtml(t.itemName)}</b><br><span class="muted">${t.date} · ${escapeHtml(t.category)}${t.location?' · 📍'+escapeHtml(t.location):''}</span></div><div class="mono" style="color:var(--${t.type==='expense'?'coin-red':'coin-teal'})">${t.type==='expense'?'-':'+'}${won(t.amount)}</div></li>`).join(''):'<p style="color:#9089AC;text-align:center;padding:20px 0;">해당 월의 지출/수입 내역이 없습니다.</p>';
+
+    document.getElementById('ledger-list').innerHTML=tx.length
+        ? tx.map(t=>`<li class="item-row">
+            <div style="min-width:0;">
+                <span class="badge ${t.type==='expense'?'exp':'inc'}">${t.type==='expense'?'구매':'판매'}</span>
+                <b>${escapeHtml(t.itemName)}${Number(t.quantity||1)>1?` ×${Number(t.quantity)}`:''}</b><br>
+                <span class="muted">${t.date} · ${escapeHtml(t.category)}${t.location?' · 📍'+escapeHtml(t.location):''}</span>
+                ${t.type==='income'&&t.note?`<div class="muted" style="margin-top:4px;">📝 ${escapeHtml(t.note)}</div>`:''}
+            </div>
+            <div class="mono" style="color:var(--${t.type==='expense'?'coin-red':'coin-teal'});flex:none;">${t.type==='expense'?'-':'+'}${won(t.amount)}</div>
+        </li>`).join('')
+        : '<p style="color:#9089AC;text-align:center;padding:20px 0;">조건에 맞는 내역이 없습니다.</p>';
 }
 
 function toggleNewItemForm(){
@@ -813,124 +1010,360 @@ function goToAddItem(dateStr){
     if(dateStr)document.getElementById('new-acquired').value=dateStr;
     window.scrollTo({top:0,behavior:'smooth'});
 }
+
+function toggleCollectionFilterPanel(){
+    const panel=document.getElementById('collection-filter-panel');
+    if(!panel)return;
+    panel.style.display=panel.style.display==='none'?'block':'none';
+}
+
 function renderCollection(){
     const q=(document.getElementById('collection-search')?.value||'').trim().toLowerCase();
     const series=document.getElementById('collection-series-filter')?.value||'';
-    const filtered=mockItems.filter(p=>!isExpenseOnlySeries(p.series)&&(!q||p.name.toLowerCase().includes(q))&&(!series||p.series===series));
-    let html=filtered.map(p=>`<div class="card collection-card" onclick="openItemEditor(${p.id})">
-        <div class="flex-between">
-            <h4 style="margin:0;display:flex;align-items:center;gap:6px;min-width:0;"><span>🧸</span><span>${escapeHtml(p.name)} ${p.fav?'<span class="fav-star">⭐</span>':''}</span></h4>
-            <span class="badge ${p.status}">${statusLabel(p.status)}</span>
+    const status=document.getElementById('collection-status-filter')?.value||'';
+
+    const filtered=mockItems.filter(p=>{
+        if(isExpenseOnlySeries(p.series))return false;
+        syncItemSaleState(p);
+
+        const matchesText=!q ||
+            p.name.toLowerCase().includes(q) ||
+            String(p.series||'').toLowerCase().includes(q);
+
+        const matchesSeries=!series||p.series===series;
+        const matchesStatus=!status ||
+            (status==='held'&&getStockQuantity(p)>0) ||
+            (status==='sold'&&getStockQuantity(p)===0) ||
+            (status==='fav'&&p.fav);
+
+        return matchesText&&matchesSeries&&matchesStatus;
+    });
+
+    let html=filtered.map(p=>`
+        <div class="card collection-card" onclick="openItemDetail(${p.id})">
+            <div class="flex-between">
+                <h4 style="margin:0;display:flex;align-items:center;gap:6px;min-width:0;">
+                    <span>🧸</span><span>${escapeHtml(p.name)} ${p.fav?'<span class="fav-star">⭐</span>':''}</span>
+                </h4>
+                <span class="badge ${p.status}">${statusLabel(p.status)}</span>
+            </div>
+            <div style="font-size:13px;color:var(--ink-soft2);margin:8px 0 0;line-height:1.7;">
+                시리즈: <b>${escapeHtml(p.series)}</b><br>
+                현재 보유: <b>${getStockQuantity(p)}개</b><br>
+                획득일: <b>${p.acquired||'-'}</b>
+            </div>
+            <div class="muted" style="text-align:right;margin-top:7px;">눌러서 상세 보기 ›</div>
         </div>
-        <div style="font-size:13px;color:var(--ink-soft2);margin:8px 0 0;line-height:1.6;">시리즈: <b>${escapeHtml(p.series)}</b><br>획득일: <b>${p.acquired||'-'}</b></div>
-        <div class="muted" style="text-align:right;margin-top:7px;">눌러서 상세/수정 ›</div>
-    </div>`).join('');
+    `).join('');
+
     if(!filtered.length)html='<p style="color:#9089AC;text-align:center;padding:20px 0;">조건에 맞는 아이템이 없습니다.</p>';
     document.getElementById('plant-container').innerHTML=html;
 }
-function resetCollectionFilter(){document.getElementById('collection-search').value='';document.getElementById('collection-series-filter').value='';renderCollection();}
-function openItemEditor(id){
+
+function resetCollectionFilter(){
+    document.getElementById('collection-search').value='';
+    const series=document.getElementById('collection-series-filter');
+    const status=document.getElementById('collection-status-filter');
+    if(series)series.value='';
+    if(status)status.value='';
+    renderCollection();
+}
+
+
+function openItemDetail(id){
     const p=mockItems.find(x=>x.id===id);if(!p)return;
-    document.getElementById('sheet-title').innerText='컬렉션 상세 / 수정';
-    const seriesOptions=managedSeries.map(v=>`<option ${v===p.series?'selected':''}>${escapeHtml(v)}</option>`).join('');
+    syncItemSaleState(p);
+
+    const stock=getStockQuantity(p);
+    const soldQty=getSoldQuantity(p);
+    const sales=Array.isArray(p.sales)?p.sales:[];
+
+    document.getElementById('sheet-title').innerText='컬렉션 상세';
+
+    const recentSales=sales.slice().sort((a,b)=>String(b.date).localeCompare(String(a.date))).slice(0,3);
+    const recentHtml=recentSales.length?`
+        <div style="border-top:1px dashed var(--line);padding-top:12px;margin-top:14px;">
+            <h4 style="margin:0 0 6px;">최근 판매</h4>
+            ${recentSales.map(s=>`
+                <div style="padding:7px 0;border-bottom:1px dashed var(--line);font-size:13px;">
+                    <b>${escapeHtml(s.date)} · ${Number(s.quantity||1)}개 · ${won(s.amount)}</b>
+                    ${s.note?`<div class="muted" style="margin-top:3px;">📝 ${escapeHtml(s.note)}</div>`:''}
+                </div>`).join('')}
+        </div>`:'';
+
     const html=`
-        <label class="muted">아이템 이름</label><input id="edit-name" value="${escapeHtml(p.name)}">
-        <div style="display:flex;gap:8px;"><div style="flex:1;"><label class="muted">시리즈</label><select id="edit-series">${seriesOptions}</select></div><div style="flex:1;"><label class="muted">구입금액</label><input id="edit-purchase-price" type="number" min="0" value="${Number(p.purchasePrice||0)}"></div></div>
-        <div style="display:flex;gap:8px;"><div style="flex:1;"><label class="muted">획득일</label><input id="edit-acquired" type="date" value="${p.acquired||''}"></div><div style="flex:1;"><label class="muted">구입 위치</label><input id="edit-location" value="${escapeHtml(p.location||'')}"></div></div>
-        <label class="muted">메모 / 상세설명</label><textarea id="edit-note" rows="4" placeholder="아이템에 대한 간단한 메모를 남겨보세요." style="resize:vertical;">${escapeHtml(p.note||'')}</textarea>
-        <label class="muted">보유 여부</label><select id="edit-status" onchange="toggleEditSaleFields()"><option value="held" ${p.status==='held'?'selected':''}>🌟 보유중</option><option value="sold" ${p.status==='sold'?'selected':''}>💰 판매완료</option></select>
-        <div id="edit-sale-fields" style="display:${p.status==='sold'?'flex':'none'};gap:8px;"><div style="flex:1;"><label class="muted">판매일</label><input id="edit-sold-date" type="date" value="${p.soldDate||''}"></div><div style="flex:1;"><label class="muted">판매금액</label><input id="edit-sale-price" type="number" min="0" value="${Number(p.salePrice||0)}"></div></div>
-        <label style="font-size:13px;display:flex;align-items:center;gap:5px;margin-top:8px;"><input id="edit-fav" type="checkbox" ${p.fav?'checked':''} style="width:auto;margin:0;"> ⭐ 최애 등록</label>
-        <div class="form-actions"><button class="danger" onclick="deleteCollectionItem(${p.id})">삭제</button><button onclick="saveCollectionItem(${p.id})">수정 저장</button></div>`;
+        <div class="stat-pill" style="margin-bottom:12px;">
+            <span>${stock===0?'💰 판매완료':'📦 현재 보유'}</span>
+            <span class="num">${stock}개</span>
+        </div>
+
+        <div style="line-height:1.9;font-size:13px;">
+            <div><span class="muted">아이템 이름</span><br><b>${escapeHtml(p.name)}</b></div>
+            <div style="margin-top:8px;"><span class="muted">시리즈</span><br><b>${escapeHtml(p.series)}</b></div>
+            <div style="display:flex;gap:20px;margin-top:8px;">
+                <div><span class="muted">등록 수량</span><br><b>${Number(p.quantity||1)}개</b></div>
+                <div><span class="muted">판매 수량</span><br><b>${soldQty}개</b></div>
+            </div>
+            <div style="display:flex;gap:20px;margin-top:8px;">
+                <div><span class="muted">구입금액</span><br><b>${won(p.purchasePrice)}</b></div>
+                <div><span class="muted">획득일</span><br><b>${p.acquired||'-'}</b></div>
+            </div>
+            <div style="margin-top:8px;"><span class="muted">구입 위치</span><br><b>${escapeHtml(p.location||'-')}</b></div>
+            ${p.note?`<div style="margin-top:8px;"><span class="muted">메모</span><br>${escapeHtml(p.note)}</div>`:''}
+            ${p.fav?'<div style="margin-top:8px;">⭐ 최애</div>':''}
+        </div>
+
+        ${recentHtml}
+
+        <div class="form-actions" style="margin-top:16px;">
+            <button class="secondary" onclick="openItemEditor(${p.id})">수정</button>
+            ${stock>0?`<button onclick="openSaleForm(${p.id})" style="background:var(--coin-teal);">판매</button>`:''}
+        </div>`;
     openSheet(html);
 }
+
+function openItemEditor(id){
+    const p=mockItems.find(x=>x.id===id);if(!p)return;
+    syncItemSaleState(p);
+
+    document.getElementById('sheet-title').innerText='컬렉션 수정';
+    const seriesOptions=managedSeries.map(v=>`<option ${v===p.series?'selected':''}>${escapeHtml(v)}</option>`).join('');
+    const soldQty=getSoldQuantity(p);
+
+    const html=`
+        <label class="muted">아이템 이름</label><input id="edit-name" value="${escapeHtml(p.name)}">
+
+        <div style="display:flex;gap:8px;">
+            <div style="flex:1.4;"><label class="muted">시리즈</label><select id="edit-series">${seriesOptions}</select></div>
+            <div style="flex:.6;"><label class="muted">등록 수량</label><input id="edit-quantity" type="number" min="${Math.max(1,soldQty)}" step="1" value="${Number(p.quantity||1)}"></div>
+        </div>
+
+        <div style="display:flex;gap:8px;">
+            <div style="flex:1;"><label class="muted">구입금액 (총액)</label><input id="edit-purchase-price" type="number" min="0" value="${Number(p.purchasePrice||0)}"></div>
+            <div style="flex:1;"><label class="muted">획득일</label><input id="edit-acquired" type="date" value="${p.acquired||''}"></div>
+        </div>
+
+        <label class="muted">구입 위치</label><input id="edit-location" value="${escapeHtml(p.location||'')}">
+        <label class="muted">메모 / 상세설명</label><textarea id="edit-note" rows="4" style="resize:vertical;">${escapeHtml(p.note||'')}</textarea>
+
+        <label style="font-size:13px;display:flex;align-items:center;gap:5px;margin-top:12px;">
+            <input id="edit-fav" type="checkbox" ${p.fav?'checked':''} style="width:auto;margin:0;"> ⭐ 최애 등록
+        </label>
+
+        <div class="form-actions">
+            <button class="danger" onclick="deleteCollectionItem(${p.id})">삭제</button>
+            <button onclick="saveCollectionItem(${p.id})">수정 저장</button>
+        </div>`;
+    openSheet(html);
+}
+
 function toggleEditSaleFields(){const sold=document.getElementById('edit-status').value==='sold';document.getElementById('edit-sale-fields').style.display=sold?'flex':'none';}
+
+function openSaleForm(id){
+    const p=mockItems.find(x=>x.id===id);if(!p)return;
+    syncItemSaleState(p);
+
+    const stock=getStockQuantity(p);
+    const sales=Array.isArray(p.sales)?p.sales:[];
+
+    if(stock<=0){
+        alert('현재 보유 수량이 없습니다.');
+        openItemDetail(id);
+        return;
+    }
+
+    document.getElementById('sheet-title').innerText='판매 등록';
+
+    const history=sales.slice().sort((a,b)=>String(b.date).localeCompare(String(a.date))).map(s=>`
+        <li class="item-row">
+            <div style="min-width:0;">
+                <b>${escapeHtml(s.date)} · ${Number(s.quantity||1)}개 · ${won(s.amount)}</b>
+                ${s.note?`<div class="muted" style="margin-top:3px;">📝 ${escapeHtml(s.note)}</div>`:''}
+            </div>
+            <button class="danger" onclick="deleteSale(${p.id},${Number(s.id)})" style="padding:6px 9px;font-size:11px;">삭제</button>
+        </li>`).join('');
+
+    const html=`
+        <div class="stat-pill" style="margin-bottom:12px;">
+            <span>📦 ${escapeHtml(p.name)}</span>
+            <span class="num">보유 ${stock}개</span>
+        </div>
+
+        <div style="display:flex;gap:8px;">
+            <div style="flex:1;"><label class="muted">판매일</label><input id="sale-date" type="date" value="${localTodayString()}"></div>
+            <div style="flex:1;"><label class="muted">판매 수량</label><input id="sale-quantity" type="number" min="1" max="${stock}" step="1" value="1"></div>
+        </div>
+
+        <label class="muted">판매금액 (이번 판매 총액)</label>
+        <input id="sale-amount" type="number" min="0" placeholder="예: 5000">
+
+        <label class="muted">판매 메모</label>
+        <textarea id="sale-note" rows="3" placeholder="예: 당근 직거래 / 친구에게 판매 / 택배비 별도" style="resize:vertical;"></textarea>
+
+        <button onclick="registerSale(${p.id})" style="width:100%;background:var(--coin-teal);">판매 등록</button>
+
+        ${sales.length?`
+        <div style="border-top:1px dashed var(--line);padding-top:12px;margin-top:14px;">
+            <h4 style="margin:0 0 6px;">판매 이력</h4>
+            <ul class="item-list">${history}</ul>
+        </div>`:''}
+
+        <button class="secondary" onclick="openItemDetail(${p.id})" style="width:100%;margin-top:12px;">상세로 돌아가기</button>`;
+    openSheet(html);
+}
+
 function saveCollectionItem(id){
     const p=mockItems.find(x=>x.id===id);if(!p)return;
+
+    const newQuantity=Math.max(1,Math.floor(Number(document.getElementById('edit-quantity').value||1)));
+    const soldQty=getSoldQuantity(p);
+    if(newQuantity<soldQty){
+        alert(`이미 ${soldQty}개가 판매되어 등록 수량을 ${soldQty}개보다 작게 줄일 수 없습니다.`);
+        return;
+    }
+
     p.name=document.getElementById('edit-name').value.trim()||p.name;
     p.series=document.getElementById('edit-series').value;
+    p.quantity=newQuantity;
     p.acquired=document.getElementById('edit-acquired').value;
     p.purchasePrice=Number(document.getElementById('edit-purchase-price').value||0);
     p.location=document.getElementById('edit-location').value.trim();
     p.note=document.getElementById('edit-note').value.trim();
-    p.status=document.getElementById('edit-status').value;
     p.fav=document.getElementById('edit-fav').checked;
-    p.soldDate=p.status==='sold'?document.getElementById('edit-sold-date').value:'';
-    p.salePrice=p.status==='sold'?Number(document.getElementById('edit-sale-price').value||0):0;
-    saveState();closeSheet();renderAll();
+    syncItemSaleState(p);
+
+    saveState();closeSheet();renderAll();openItemDetail(id);
 }
+
+function applyEditorFieldsBeforeSale(p){
+    const qtyInput=document.getElementById('edit-quantity');
+    if(!qtyInput)return true;
+
+    const newQuantity=Math.max(1,Math.floor(Number(qtyInput.value||1)));
+    const soldQty=getSoldQuantity(p);
+    if(newQuantity<soldQty){
+        alert(`이미 ${soldQty}개가 판매되어 등록 수량을 ${soldQty}개보다 작게 줄일 수 없습니다.`);
+        return false;
+    }
+
+    p.name=document.getElementById('edit-name').value.trim()||p.name;
+    p.series=document.getElementById('edit-series').value;
+    p.quantity=newQuantity;
+    p.acquired=document.getElementById('edit-acquired').value;
+    p.purchasePrice=Number(document.getElementById('edit-purchase-price').value||0);
+    p.location=document.getElementById('edit-location').value.trim();
+    p.note=document.getElementById('edit-note').value.trim();
+    p.fav=document.getElementById('edit-fav').checked;
+    syncItemSaleState(p);
+    return true;
+}
+
+
+function toggleSaleForm(){
+    const area=document.getElementById('sale-form-area');
+    const btn=document.getElementById('sale-toggle-btn');
+    if(!area||!btn)return;
+
+    const opening=area.style.display==='none';
+    area.style.display=opening?'block':'none';
+    btn.innerText=opening?'닫기':'💰 판매하기';
+
+    if(opening){
+        setTimeout(()=>document.getElementById('sale-quantity')?.focus(),0);
+    }
+}
+
+function registerSale(id){
+    const p=mockItems.find(x=>x.id===id);if(!p)return;
+
+    const date=document.getElementById('sale-date')?.value||'';
+    const qty=Math.floor(Number(document.getElementById('sale-quantity')?.value||0));
+    const amount=Number(document.getElementById('sale-amount')?.value||0);
+    const note=(document.getElementById('sale-note')?.value||'').trim();
+    const stock=getStockQuantity(p);
+
+    if(!date){alert('판매일을 입력해주세요.');return;}
+    if(qty<1){alert('판매 수량은 1개 이상이어야 합니다.');return;}
+    if(qty>stock){alert(`현재 보유 수량은 ${stock}개입니다. ${stock}개 이하로 입력해주세요.`);return;}
+    if(amount<0){alert('판매금액은 0원 이상으로 입력해주세요.');return;}
+
+    if(!Array.isArray(p.sales))p.sales=[];
+    p.sales.push({
+        id:Date.now()+Math.floor(Math.random()*1000),
+        date,
+        quantity:qty,
+        amount,
+        note
+    });
+    syncItemSaleState(p);
+
+    saveState();
+    renderAll();
+    closeSheet();
+    openItemDetail(id);
+}
+
+function deleteSale(itemId,saleId){
+    const p=mockItems.find(x=>x.id===itemId);if(!p)return;
+    if(!confirm('이 판매 이력을 삭제할까요? 보유 수량이 다시 복구됩니다.'))return;
+
+    p.sales=(Array.isArray(p.sales)?p.sales:[]).filter(sale=>Number(sale.id)!==Number(saleId));
+    syncItemSaleState(p);
+    saveState();
+    renderAll();
+    closeSheet();
+    openSaleForm(itemId);
+}
+
 function deleteCollectionItem(id){if(!confirm('이 아이템을 삭제할까요?'))return;mockItems=mockItems.filter(x=>x.id!==id);saveState();closeSheet();renderAll();}
 function addCollectionItem(){
-    const name=document.getElementById('new-name').value.trim();if(!name){alert('아이템 이름을 입력해주세요.');return;}
-    mockItems.unshift({
-        id:Date.now(),name,series:document.getElementById('new-series').value,status:'held',
+    const name=document.getElementById('new-name').value.trim();
+    if(!name){alert('아이템 이름을 입력해주세요.');return;}
+
+    const quantity=Math.max(1,Math.floor(Number(document.getElementById('new-quantity')?.value||1)));
+
+    mockItems.unshift(normalizeItem({
+        id:Date.now(),
+        name,
+        series:document.getElementById('new-series').value,
+        quantity,
         acquired:document.getElementById('new-acquired').value,
-        purchasePrice:Number(document.getElementById('new-purchase-price').value||0),location:document.getElementById('new-location').value.trim(),
-        note:document.getElementById('new-note').value.trim(),fav:document.getElementById('new-fav').checked,
-        soldDate:'',salePrice:0
-    });
+        purchasePrice:Number(document.getElementById('new-purchase-price').value||0),
+        location:document.getElementById('new-location').value.trim(),
+        note:document.getElementById('new-note').value.trim(),
+        fav:document.getElementById('new-fav').checked,
+        sales:[]
+    }));
+
     ['new-name','new-purchase-price','new-location','new-note'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('new-quantity').value='1';
     document.getElementById('new-fav').checked=false;
     saveState();renderAll();toggleNewItemForm();
 }
 
 
 function renderTotalStats(){
-    // 아이템 이름에 #이 들어간 데이터는 전체 통계에서 제외
     const visibleItems=mockItems.filter(item=>!isHiddenItem(item));
+    const visibleTx=getTransactions();
 
-    // 재무 합계는 배송비도 실제 지출이므로 포함
-    const visibleTx=[];
-    visibleItems.forEach(item=>{
-        if(item.acquired&&Number(item.purchasePrice)>0){
-            visibleTx.push({
-                date:item.acquired,
-                type:'expense',
-                category:item.series,
-                itemName:item.name,
-                amount:Number(item.purchasePrice),
-                location:item.location||''
-            });
-        }
-        if(item.status==='sold'&&item.soldDate&&Number(item.salePrice)>0){
-            visibleTx.push({
-                date:item.soldDate,
-                type:'income',
-                category:item.series,
-                itemName:item.name,
-                amount:Number(item.salePrice),
-                location:'판매'
-            });
-        }
-    });
+    const totalExpense=visibleTx.filter(t=>t.type==='expense').reduce((sum,t)=>sum+Number(t.amount||0),0);
+    const totalIncome=visibleTx.filter(t=>t.type==='income').reduce((sum,t)=>sum+Number(t.amount||0),0);
 
-    const totalExpense=visibleTx
-        .filter(t=>t.type==='expense')
-        .reduce((sum,t)=>sum+Number(t.amount||0),0);
-
-    const totalIncome=visibleTx
-        .filter(t=>t.type==='income')
-        .reduce((sum,t)=>sum+Number(t.amount||0),0);
-
-    // 뽑기 수/평균 지출에서는 비용 전용 시리즈(배송비/#배송비) 제외
     const pullItems=visibleItems.filter(item=>!isExpenseOnlySeries(item.series));
+    const totalPulls=pullItems.reduce((sum,item)=>sum+Number(item.quantity||1),0);
     const pullSpend=pullItems.reduce((sum,item)=>sum+Number(item.purchasePrice||0),0);
 
-    document.getElementById('total-stat-pull-count').innerText=pullItems.length+'회';
-    document.getElementById('total-stat-avg-spend').innerText=won(
-        pullItems.length ? Math.round(pullSpend/pullItems.length) : 0
-    );
+    document.getElementById('total-stat-pull-count').innerText=totalPulls+'회';
+    document.getElementById('total-stat-avg-spend').innerText=won(totalPulls?Math.round(pullSpend/totalPulls):0);
     document.getElementById('total-stat-expense').innerText=won(totalExpense);
     document.getElementById('total-stat-income').innerText=won(totalIncome);
     document.getElementById('total-stat-net').innerText=won(totalExpense-totalIncome);
 
     const expenseBySeries={};
-    visibleTx
-        .filter(t=>t.type==='expense')
-        .forEach(t=>{
-            const series=t.category||'미분류';
-            expenseBySeries[series]=(expenseBySeries[series]||0)+Number(t.amount||0);
-        });
+    visibleTx.filter(t=>t.type==='expense').forEach(t=>{
+        const series=t.category||'미분류';
+        expenseBySeries[series]=(expenseBySeries[series]||0)+Number(t.amount||0);
+    });
 
     const expenseRows=Object.entries(expenseBySeries).sort((a,b)=>b[1]-a[1]);
     const expenseTotal=expenseRows.reduce((sum,[,amount])=>sum+amount,0);
@@ -951,19 +1384,18 @@ function renderTotalStats(){
         }).join('')
         : '<p class="muted" style="text-align:center;padding:12px 0;margin:0;">지출 내역이 없습니다.</p>';
 
-    // 컬렉션 보유 현황에서는 비용 전용 시리즈 제외
     const collectionItems=visibleItems.filter(item=>!isExpenseOnlySeries(item.series));
     const grouped={};
     collectionItems.forEach(item=>{
         const series=item.series||'미분류';
-        if(!grouped[series])grouped[series]={total:0,held:0,sold:0};
-        grouped[series].total++;
-        if(item.status==='sold')grouped[series].sold++;
-        else grouped[series].held++;
+        if(!grouped[series])grouped[series]={registered:0,stock:0,sold:0};
+        grouped[series].registered+=Number(item.quantity||1);
+        grouped[series].stock+=getStockQuantity(item);
+        grouped[series].sold+=getSoldQuantity(item);
     });
 
     const collectionRows=Object.entries(grouped)
-        .sort((a,b)=>b[1].total-a[1].total || a[0].localeCompare(b[0],'ko'));
+        .sort((a,b)=>b[1].stock-a[1].stock || a[0].localeCompare(b[0],'ko'));
 
     const collectionContainer=document.getElementById('total-series-collection-list');
     collectionContainer.innerHTML=collectionRows.length
@@ -971,30 +1403,134 @@ function renderTotalStats(){
             <div class="item-row">
                 <div>
                     <b>📁 ${escapeHtml(series)}</b>
-                    <div class="muted" style="margin-top:4px;">보유 ${count.held}개 · 판매 ${count.sold}개</div>
+                    <div class="muted" style="margin-top:4px;">현재 보유 ${count.stock}개 · 판매 ${count.sold}개 · 등록 ${count.registered}개</div>
                 </div>
-                <div class="mono" style="font-weight:700;">${count.total}개</div>
+                <div class="mono" style="font-weight:700;">${count.stock}개</div>
             </div>
         `).join('')
         : '<p class="muted" style="text-align:center;padding:12px 0;margin:0;">컬렉션 데이터가 없습니다.</p>';
+}
+
+
+function getSaleStatsAvailableMonths(){
+    return [...new Set(
+        getTransactions()
+            .filter(t=>t.type==='income')
+            .map(t=>String(t.date||'').slice(0,7))
+            .filter(v=>/^\d{4}-\d{2}$/.test(v))
+    )].sort((a,b)=>b.localeCompare(a));
+}
+
+function renderSaleStatsYearFilter(){
+    const yearSelect=document.getElementById('sale-stats-year-filter');
+    if(!yearSelect)return;
+
+    const previous=yearSelect.value;
+    const months=getSaleStatsAvailableMonths();
+    const years=[...new Set(months.map(v=>v.slice(0,4)))].sort((a,b)=>b.localeCompare(a));
+    const currentYear=localTodayString().slice(0,4);
+    if(!years.length)years.push(currentYear);
+
+    yearSelect.innerHTML=years.map(year=>`<option value="${year}">${year}년</option>`).join('');
+    yearSelect.value=previous&&years.includes(previous)
+        ? previous
+        : years.includes(currentYear)?currentYear:years[0];
+}
+
+function renderSaleStatsMonthOptions(){
+    const yearSelect=document.getElementById('sale-stats-year-filter');
+    const monthSelect=document.getElementById('sale-stats-month-filter');
+    if(!yearSelect||!monthSelect)return;
+
+    const year=yearSelect.value;
+    const previous=monthSelect.value;
+    let months=getSaleStatsAvailableMonths()
+        .filter(v=>v.startsWith(year+'-'))
+        .map(v=>v.slice(5,7))
+        .sort((a,b)=>Number(b)-Number(a));
+
+    const currentMonth=localTodayString().slice(5,7);
+    if(!months.length)months=[currentMonth];
+
+    monthSelect.innerHTML=months.map(mon=>`<option value="${mon}">${Number(mon)}월</option>`).join('');
+    monthSelect.value=previous&&months.includes(previous)?previous:months[0];
+}
+
+function getSelectedSaleStatsMonth(){
+    const year=document.getElementById('sale-stats-year-filter')?.value||localTodayString().slice(0,4);
+    const mon=document.getElementById('sale-stats-month-filter')?.value||localTodayString().slice(5,7);
+    return `${year}-${mon}`;
+}
+
+function renderSaleStats(){
+    const month=getSelectedSaleStatsMonth();
+    const sales=getTransactions().filter(t=>t.type==='income'&&t.date.startsWith(month));
+
+    const soldQty=sales.reduce((sum,t)=>sum+Number(t.quantity||1),0);
+    const total=sales.reduce((sum,t)=>sum+Number(t.amount||0),0);
+    const avg=soldQty?Math.round(total/soldQty):0;
+
+    document.getElementById('sale-stat-count').innerText=soldQty+'개';
+    document.getElementById('sale-stat-total').innerText=won(total);
+    document.getElementById('sale-stat-avg').innerText=won(avg);
+
+    const bySeries={};
+    sales.forEach(t=>{
+        const series=t.category||'미분류';
+        bySeries[series]=(bySeries[series]||0)+Number(t.amount||0);
+    });
+
+    const rows=Object.entries(bySeries).sort((a,b)=>b[1]-a[1]);
+    const list=document.getElementById('sale-stats-series-list');
+    list.innerHTML=rows.length
+        ? rows.map(([series,amount])=>`
+            <div class="item-row">
+                <b>📁 ${escapeHtml(series)}</b>
+                <span class="mono" style="color:var(--coin-teal);font-weight:700;">${won(amount)}</span>
+            </div>`).join('')
+        : '<p class="muted" style="text-align:center;padding:14px 0;">해당 월의 판매 내역이 없습니다.</p>';
+
+    const canvas=document.getElementById('salePieChart');
+    const fallback=document.getElementById('sale-chart-fallback');
+    if(canvas&&typeof Chart!=='undefined'&&rows.length){
+        fallback.style.display='none';
+        if(salePieChart)salePieChart.destroy();
+        salePieChart=new Chart(canvas.getContext('2d'),{
+            type:'pie',
+            data:{
+                labels:rows.map(([series])=>series),
+                datasets:[{
+                    data:rows.map(([,amount])=>amount),
+                    backgroundColor:['#22C3A6','#4FA6E8','#FFB627','#A67AE0','#FF4F64','#8A84A8']
+                }]
+            },
+            options:{plugins:{legend:{position:'bottom'}}}
+        });
+    }else{
+        if(salePieChart){salePieChart.destroy();salePieChart=null;}
+        if(fallback)fallback.style.display=rows.length?'none':'block';
+    }
 }
 
 function renderStats(){
     const month=getSelectedStatsMonth();
     renderStatsSeriesExpense();
 
-    // '#' 아이템은 지출/통계에서 제외합니다.
-    // 배송비/택배비/수수료는 컬렉션 집계에서는 제외하지만 실제 지출 통계에는 포함합니다.
     const monthItems=mockItems.filter(p=>
         !isHiddenItem(p) &&
         !isExpenseOnlySeries(p.series) &&
         (p.acquired||'').startsWith(month)
     );
 
-    const totalPulls=monthItems.length;
-    const totalSpend=monthItems.reduce((s,p)=>s+Number(p.purchasePrice||0),0);
-    document.getElementById('stat-pull-count').innerText=totalPulls+'회';
-    document.getElementById('stat-avg-spend').innerText=won(totalPulls?Math.round(totalSpend/totalPulls):0);
+    const totalPurchases=monthItems.reduce((sum,p)=>sum+Number(p.quantity||1),0);
+    const itemSpend=monthItems.reduce((s,p)=>s+Number(p.purchasePrice||0),0);
+    const totalPurchaseAmount=getTransactions()
+        .filter(t=>t.type==='expense'&&t.date.startsWith(month))
+        .reduce((s,t)=>s+Number(t.amount||0),0);
+
+    document.getElementById('stat-pull-count').innerText=totalPurchases+'개';
+    document.getElementById('stat-total-purchase').innerText=won(totalPurchaseAmount);
+    document.getElementById('stat-avg-spend').innerText=won(totalPurchases?Math.round(itemSpend/totalPurchases):0);
 
     const expByCat={};
     getTransactions()
@@ -1027,7 +1563,16 @@ function renderStats(){
     document.getElementById('stats-plant-group-list').innerHTML=groupSeriesList.length
         ? groupSeriesList.map(s=>{
             const items=visibleItems.filter(p=>p.series===s);
-            return `<div style="margin-bottom:12px;background:#fff;padding:14px;border-radius:12px;box-shadow:var(--shadow);"><b>📁 ${escapeHtml(s)} (${items.length}개)</b><div style="color:var(--ink-soft2);font-size:13px;margin-top:6px;line-height:1.6;">${items.map(p=>'🧸 '+escapeHtml(p.name)).join(', ')}</div></div>`;
+            const stockTotal=items.reduce((sum,p)=>sum+getStockQuantity(p),0);
+            const itemLabels=items.map(p=>{
+                const stock=getStockQuantity(p);
+                const sold=getSoldQuantity(p);
+                return `🧸 ${escapeHtml(p.name)} ×${stock}${stock===0?' (판매완료)':sold?` (판매 ${sold})`:''}`;
+            }).join(', ');
+            return `<div style="margin-bottom:12px;background:#fff;padding:14px;border-radius:12px;box-shadow:var(--shadow);">
+                <b>📁 ${escapeHtml(s)} (현재 보유 ${stockTotal}개)</b>
+                <div style="color:var(--ink-soft2);font-size:13px;margin-top:6px;line-height:1.6;">${itemLabels}</div>
+            </div>`;
         }).join('')
         : '<p class="muted" style="text-align:center;padding:20px 0;">등록된 컬렉션이 없습니다.</p>';
 }
@@ -1043,7 +1588,7 @@ function renderSeriesManager(){
     if(!list)return;
 
     list.innerHTML=managedSeries.map((name,index)=>{
-        const usedCount=mockItems.filter(item=>item.series===name).length;
+        const usedCount=mockItems.filter(item=>item.series===name).reduce((sum,item)=>sum+Number(item.quantity||1),0);
         return `<li class="item-row">
             <div>
                 <span>${escapeHtml(name)}</span>
@@ -1123,40 +1668,62 @@ async function exportExcel(){
         wb.creator='Gachive';
         wb.created=new Date();
 
-        // 1시트: 컬렉션
         const collectionSheet=wb.addWorksheet('컬렉션');
         collectionSheet.columns=[
+            {header:'아이템ID',key:'id',width:16},
             {header:'아이템명',key:'name',width:24},
             {header:'시리즈',key:'series',width:22},
+            {header:'등록수량',key:'quantity',width:11},
+            {header:'현재재고',key:'stock',width:11},
             {header:'획득일',key:'acquired',width:14},
-            {header:'구입금액',key:'purchasePrice',width:14},
+            {header:'구입금액(총액)',key:'purchasePrice',width:16},
             {header:'구입위치',key:'location',width:22},
             {header:'보유상태',key:'status',width:12},
-            {header:'판매일',key:'soldDate',width:14},
-            {header:'판매금액',key:'salePrice',width:14},
+            {header:'누적판매수량',key:'soldQty',width:13},
+            {header:'누적판매금액',key:'saleTotal',width:15},
             {header:'최애',key:'fav',width:8},
             {header:'메모',key:'note',width:40}
         ];
 
         mockItems.forEach(p=>collectionSheet.addRow({
+            id:p.id,
             name:p.name,
             series:p.series,
+            quantity:Number(p.quantity||1),
+            stock:getStockQuantity(p),
             acquired:p.acquired,
             purchasePrice:Number(p.purchasePrice||0),
             location:p.location||'',
-            status:p.status==='sold'?'판매완료':'보유중',
-            soldDate:p.soldDate||'',
-            salePrice:Number(p.salePrice||0),
+            status:getStockQuantity(p)===0?'판매완료':'보유중',
+            soldQty:getSoldQuantity(p),
+            saleTotal:getTotalSaleAmount(p),
             fav:p.fav?'Y':'N',
             note:p.note||''
         }));
 
-        // 2시트: 시리즈 — 컬렉션 시트의 드롭다운 원본
+        const salesSheet=wb.addWorksheet('판매이력');
+        salesSheet.columns=[
+            {header:'아이템ID',key:'itemId',width:16},
+            {header:'아이템명',key:'itemName',width:24},
+            {header:'판매일',key:'date',width:14},
+            {header:'판매수량',key:'quantity',width:12},
+            {header:'판매금액(총액)',key:'amount',width:16},
+            {header:'판매메모',key:'note',width:30}
+        ];
+        mockItems.forEach(p=>{
+            (Array.isArray(p.sales)?p.sales:[]).forEach(sale=>salesSheet.addRow({
+                itemId:p.id,
+                itemName:p.name,
+                date:sale.date,
+                quantity:Number(sale.quantity||1),
+                amount:Number(sale.amount||0)
+            }));
+        });
+
         const seriesSheet=wb.addWorksheet('시리즈');
         seriesSheet.columns=[{header:'시리즈명',key:'seriesName',width:28}];
         managedSeries.forEach(seriesName=>seriesSheet.addRow({seriesName}));
 
-        // 3시트: 설정
         const settingsSheet=wb.addWorksheet('설정');
         settingsSheet.columns=[
             {header:'항목',key:'item',width:18},
@@ -1164,8 +1731,7 @@ async function exportExcel(){
         ];
         settingsSheet.addRow({item:'앱 이름',value:getAppTitle()});
 
-        // 헤더 스타일
-        [collectionSheet,seriesSheet,settingsSheet].forEach(ws=>{
+        [collectionSheet,salesSheet,seriesSheet,settingsSheet].forEach(ws=>{
             ws.getRow(1).font={bold:true,color:{argb:'FFFFFFFF'}};
             ws.getRow(1).fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF1B2545'}};
             ws.getRow(1).alignment={vertical:'middle',horizontal:'center'};
@@ -1173,17 +1739,17 @@ async function exportExcel(){
             ws.views=[{state:'frozen',ySplit:1}];
         });
 
-        // 금액 표시
+        collectionSheet.getColumn('id').hidden=true;
+        salesSheet.getColumn('itemId').hidden=true;
         collectionSheet.getColumn('purchasePrice').numFmt='#,##0';
-        collectionSheet.getColumn('salePrice').numFmt='#,##0';
+        collectionSheet.getColumn('saleTotal').numFmt='#,##0';
+        salesSheet.getColumn('amount').numFmt='#,##0';
         collectionSheet.getColumn('note').alignment={wrapText:true,vertical:'top'};
 
-        // 시리즈 드롭다운: 2시트의 목록을 직접 참조
-        // 데이터가 없는 새 행도 사용할 수 있도록 1000행까지 적용
         const seriesEndRow=Math.max(2,managedSeries.length+1);
         const seriesFormula=`'시리즈'!$A$2:$A$${seriesEndRow}`;
         for(let row=2;row<=1001;row++){
-            collectionSheet.getCell(`B${row}`).dataValidation={
+            collectionSheet.getCell(`C${row}`).dataValidation={
                 type:'list',
                 allowBlank:true,
                 formulae:[seriesFormula],
@@ -1193,8 +1759,8 @@ async function exportExcel(){
             };
         }
 
-        // 엑셀에서 새 행을 추가해 다시 업로드할 수 있도록 빈 행의 모양도 유지
-        collectionSheet.autoFilter={from:'A1',to:'J1'};
+        collectionSheet.autoFilter={from:'A1',to:'M1'};
+        salesSheet.autoFilter={from:'A1',to:'F1'};
 
         const buffer=await wb.xlsx.writeBuffer();
         const blob=new Blob([buffer],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
@@ -1222,30 +1788,111 @@ function excelDateToString(v){
 }
 function importExcel(event){
     const file=event.target.files?.[0];if(!file)return;
-    if(typeof XLSX==='undefined'){alert('엑셀 기능을 불러오지 못했습니다. 인터넷 연결 후 다시 시도해주세요.');event.target.value='';return;}
-    if(!confirm('엑셀 파일의 내용으로 현재 컬렉션 데이터를 교체할까요?')){event.target.value='';return;}
+    if(typeof XLSX==='undefined'){
+        alert('엑셀 기능을 불러오지 못했습니다. 인터넷 연결 후 다시 시도해주세요.');
+        event.target.value='';
+        return;
+    }
+    if(!confirm('엑셀 파일의 내용으로 현재 컬렉션 데이터를 교체할까요?')){
+        event.target.value='';
+        return;
+    }
+
     const reader=new FileReader();
     reader.onload=e=>{
         try{
             const wb=XLSX.read(e.target.result,{type:'array'});
             const collectionSheet=wb.Sheets['컬렉션']||wb.Sheets[wb.SheetNames[0]];
             if(!collectionSheet)throw new Error('컬렉션 시트 없음');
+
             const rows=XLSX.utils.sheet_to_json(collectionSheet,{defval:''});
-            const imported=rows.filter(r=>String(r['아이템명']||'').trim()).map((r,i)=>({
-                id:Date.now()+i,name:String(r['아이템명']).trim(),series:String(r['시리즈']||'미분류').trim(),
-                acquired:excelDateToString(r['획득일']),purchasePrice:Number(r['구입금액']||0),location:String(r['구입위치']||'').trim(),
-                status:parseStatus(r['보유상태']),soldDate:excelDateToString(r['판매일']),salePrice:Number(r['판매금액']||0),
-                fav:parseFav(r['최애']),note:String(r['메모']||'').trim()
-            }));
+            const rawItems=rows
+                .filter(r=>String(r['아이템명']||'').trim())
+                .map((r,i)=>{
+                    const quantity=Math.max(1,Math.floor(Number(r['등록수량']||r['수량']||1)));
+                    const legacyStatus=parseStatus(r['보유상태']);
+                    return {
+                        id:Number(r['아이템ID'])||Date.now()+i,
+                        name:String(r['아이템명']).trim(),
+                        series:String(r['시리즈']||'미분류').trim(),
+                        quantity,
+                        acquired:excelDateToString(r['획득일']),
+                        purchasePrice:Number(r['구입금액(총액)']??r['구입금액']??0),
+                        location:String(r['구입위치']||'').trim(),
+                        status:legacyStatus,
+                        soldDate:excelDateToString(r['판매일']),
+                        salePrice:Number(r['판매금액']||0),
+                        fav:parseFav(r['최애']),
+                        note:String(r['메모']||'').trim(),
+                        sales:[]
+                    };
+                });
+
+            const salesSheet=wb.Sheets['판매이력'];
+            if(salesSheet){
+                const saleRows=XLSX.utils.sheet_to_json(salesSheet,{defval:''});
+                saleRows.forEach((r,i)=>{
+                    const itemId=Number(r['아이템ID']);
+                    const itemName=String(r['아이템명']||'').trim();
+                    const target=rawItems.find(item=>
+                        (itemId&&Number(item.id)===itemId) ||
+                        (!itemId&&itemName&&item.name===itemName)
+                    );
+                    if(!target)return;
+
+                    const date=excelDateToString(r['판매일']);
+                    const quantity=Math.max(1,Math.floor(Number(r['판매수량']||1)));
+                    const amount=Number(r['판매금액(총액)']??r['판매금액']??0);
+                    const note=String(r['판매메모']||r['메모']||'').trim();
+                    if(date){
+                        target.sales.push({
+                            id:Date.now()+i+Math.floor(Math.random()*10000),
+                            date,
+                            quantity,
+                            amount,
+                            note
+                        });
+                    }
+                });
+            }else{
+                // 구버전 엑셀은 판매일/판매금액 1건을 전량판매 이력으로 변환
+                rawItems.forEach(item=>{
+                    if(item.status==='sold'&&item.soldDate){
+                        item.sales=[{
+                            id:Date.now()+Math.floor(Math.random()*10000),
+                            date:item.soldDate,
+                            quantity:item.quantity,
+                            amount:Number(item.salePrice||0)
+                        }];
+                    }
+                });
+            }
+
+            const imported=rawItems.map(normalizeItem);
+
             const seriesSheet=wb.Sheets['시리즈'];
-            let importedSeries=seriesSheet?XLSX.utils.sheet_to_json(seriesSheet,{defval:''}).map(r=>String(r['시리즈명']||'').trim()).filter(Boolean):[];
+            let importedSeries=seriesSheet
+                ? XLSX.utils.sheet_to_json(seriesSheet,{defval:''})
+                    .map(r=>String(r['시리즈명']||'').trim()).filter(Boolean)
+                : [];
             if(!importedSeries.length)importedSeries=[...new Set(imported.map(p=>p.series).filter(Boolean))];
             if(importedSeries.length)managedSeries=importedSeries;
+
             mockItems=imported;
+
             const settingsSheet=wb.Sheets['설정'];
-            if(settingsSheet){const settings=XLSX.utils.sheet_to_json(settingsSheet,{defval:''});const titleRow=settings.find(r=>r['항목']==='앱 이름');if(titleRow?.['값'])document.querySelector('header .title').innerHTML=`🧸 ${escapeHtml(titleRow['값'])}`;}
-            saveState();renderAll();alert(`${mockItems.length}개의 컬렉션 데이터를 불러왔습니다.`);
-        }catch(err){console.error(err);alert('엑셀 파일을 읽지 못했습니다. Gachive에서 내려받은 형식인지 확인해주세요.');}
+            if(settingsSheet){
+                const settings=XLSX.utils.sheet_to_json(settingsSheet,{defval:''});
+                const titleRow=settings.find(r=>r['항목']==='앱 이름');
+                if(titleRow?.['값'])document.querySelector('header .title').innerHTML=`🧸 ${escapeHtml(titleRow['값'])}`;
+            }
+
+            saveState();renderAll();
+            alert(`${mockItems.length}개의 컬렉션 데이터를 불러왔습니다.`);
+        }catch(err){
+            console.error(err);
+            alert('엑셀 파일을 읽지 못했습니다. Gachive에서 내려받은 형식인지 확인해주세요.');
+        }
         event.target.value='';
     };
     reader.readAsArrayBuffer(file);
@@ -1305,7 +1952,7 @@ function importJsonText(){
     }
 }
 
-function resetAllData(){if(!confirm('기본 예시 데이터로 초기화할까요?'))return;managedSeries=SEED_SERIES.slice();mockItems=cloneSeedItems();document.querySelector('header .title').innerHTML=`🧸 ${DEFAULT_TITLE}`;saveState();renderAll();alert('기본 데이터로 초기화되었습니다.');}
+function resetAllData(){if(!confirm('기본 예시 데이터로 초기화할까요?'))return;managedSeries=SEED_SERIES.slice();mockItems=cloneSeedItems().map(normalizeItem);document.querySelector('header .title').innerHTML=`🧸 ${DEFAULT_TITLE}`;saveState();renderAll();alert('기본 데이터로 초기화되었습니다.');}
 
 function renderAll(){
     renderSeriesControls();
@@ -1319,9 +1966,12 @@ function renderAll(){
 
     renderStatsYearFilter();
     renderStatsMonthOptions();
+    renderSaleStatsYearFilter();
+    renderSaleStatsMonthOptions();
 
     renderCollection();
-    try{renderStats();}catch(e){console.warn('통계 렌더링 생략:',e);}
+    try{renderStats();}catch(e){console.warn('구매 통계 렌더링 생략:',e);}
+    try{renderSaleStats();}catch(e){console.warn('판매 통계 렌더링 생략:',e);}
     try{renderTotalStats();}catch(e){console.warn('전체 통계 렌더링 생략:',e);}
 }
 function initApp(){
