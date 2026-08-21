@@ -301,7 +301,7 @@ button.secondary{background:#8A84A8;}
     }
 
     #collection-filter-panel{
-        padding:8px !important;
+        padding:0 !important;
     }
 
     /* 상세/수정/판매 바텀시트 */
@@ -335,6 +335,79 @@ button.secondary{background:#8A84A8;}
     .bottom-nav .nav-item div{
         font-size:16px;
     }
+}
+
+/* Scroll to top */
+.scroll-top-btn{
+    position:fixed;
+    right:16px;
+    bottom:88px;
+    width:42px;
+    height:42px;
+    padding:0;
+    border-radius:50%;
+    background:var(--navy);
+    color:#fff;
+    box-shadow:0 4px 14px rgba(27,37,69,.25);
+    z-index:95;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:20px;
+    line-height:1;
+    opacity:0;
+    transform:translateY(8px);
+    pointer-events:none;
+    transition:opacity .18s ease,transform .18s ease;
+}
+.scroll-top-btn.show{
+    opacity:1;
+    transform:translateY(0);
+    pointer-events:auto;
+}
+.setting-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:14px;
+}
+.toggle-switch{
+    position:relative;
+    width:46px;
+    height:26px;
+    flex:none;
+}
+.toggle-switch input{
+    position:absolute;
+    opacity:0;
+    width:0;
+    height:0;
+}
+.toggle-slider{
+    position:absolute;
+    inset:0;
+    background:#D8D3E6;
+    border-radius:999px;
+    cursor:pointer;
+    transition:.2s;
+}
+.toggle-slider::after{
+    content:"";
+    position:absolute;
+    width:20px;
+    height:20px;
+    left:3px;
+    top:3px;
+    background:#fff;
+    border-radius:50%;
+    box-shadow:0 1px 4px rgba(27,37,69,.22);
+    transition:.2s;
+}
+.toggle-switch input:checked + .toggle-slider{
+    background:var(--navy);
+}
+.toggle-switch input:checked + .toggle-slider::after{
+    transform:translateX(20px);
 }
 
 </style>
@@ -389,12 +462,20 @@ button.secondary{background:#8A84A8;}
         <p class="muted" style="margin:10px 0 0;text-align:center;">컬렉션의 구입·판매 정보를 기준으로 자동 집계되는 조회 전용 화면입니다.</p>
     </div>
 <div class="card">
-        <div class="flex-between" style="margin-bottom:8px;gap:8px;flex-wrap:wrap;">
+        <div class="flex-between" style="margin-bottom:8px;gap:8px;">
             <h4 id="ledger-list-title" style="margin:0;">8월 전체 내역</h4>
-            <select id="ledger-series-filter" onchange="renderLedgerList()" style="width:auto;max-width:160px;margin:0;padding:6px 8px;font-size:12px;">
+        </div>
+
+        <div style="display:flex;gap:6px;margin-bottom:8px;align-items:center;">
+            <input id="ledger-search" oninput="renderLedgerList()" type="text"
+                placeholder="기록 검색..."
+                style="margin:0;flex:1;min-width:0;padding:8px 10px;font-size:12px;">
+            <select id="ledger-series-filter" onchange="renderLedgerList()"
+                style="margin:0;width:38%;max-width:145px;min-width:0;padding:8px 7px;font-size:11px;">
                 <option value="">전체 시리즈</option>
             </select>
         </div>
+
         <div id="ledger-type-filter" class="sub-tab" style="margin-bottom:10px;">
             <div class="sub-tab-item active" onclick="setLedgerTypeFilter('all',this)">전체</div>
             <div class="sub-tab-item" onclick="setLedgerTypeFilter('expense',this)">구매</div>
@@ -442,23 +523,23 @@ button.secondary{background:#8A84A8;}
             <h4 style="margin:0;">컬렉션 검색 🦄</h4>
             <button onclick="resetCollectionFilter()" style="padding:4px 10px;font-size:11px;background:#8A84A8;border-radius:8px;">초기화</button>
         </div>
-        <div style="display:flex;gap:8px;margin-bottom:10px;">
-            <input id="collection-search" oninput="renderCollection()" type="text" placeholder="이름 또는 시리즈 검색..." style="margin:0;flex:1;">
-            <button class="secondary" onclick="toggleCollectionFilterPanel()" style="width:auto;padding:8px 12px;flex:none;">🔎 필터</button>
+
+        <div id="collection-filter-panel" style="display:flex;gap:8px;margin-bottom:10px;">
+            <select id="collection-status-filter" onchange="renderCollection()" style="margin:0;flex:1;font-size:12px;min-width:0;">
+                <option value="">전체 상태</option>
+                <option value="held">보유중</option>
+                <option value="sold">판매완료</option>
+                <option value="fav">⭐ 최애</option>
+            </select>
+            <select id="collection-series-filter" onchange="renderCollection()" style="margin:0;flex:1;font-size:12px;min-width:0;">
+                <option value="">📁 전체 시리즈</option>
+            </select>
         </div>
-        <div id="collection-filter-panel" style="display:none;background:#FAF8FE;border:1px solid var(--line);border-radius:12px;padding:10px;margin-bottom:15px;">
-            <div style="display:flex;gap:8px;">
-                <select id="collection-status-filter" onchange="renderCollection()" style="margin:0;flex:1;font-size:12px;">
-                    <option value="">전체 상태</option>
-                    <option value="held">보유중</option>
-                    <option value="sold">판매완료</option>
-                    <option value="fav">⭐ 최애</option>
-                </select>
-                <select id="collection-series-filter" onchange="renderCollection()" style="margin:0;flex:1;font-size:12px;">
-                    <option value="">📁 전체 시리즈</option>
-                </select>
-            </div>
+
+        <div style="margin-bottom:15px;">
+            <input id="collection-search" oninput="renderCollection()" type="text" placeholder="이름 또는 시리즈 검색..." style="margin:0;width:100%;">
         </div>
+
         <div id="plant-container"></div>
     </div>
 </div>
@@ -648,7 +729,7 @@ button.secondary{background:#8A84A8;}
             <div style="margin-top:12px;padding-top:12px;border-top:1px dashed var(--line);">
                 <label class="muted" for="json-text-input">JSON 텍스트로 불러오기</label>
                 <textarea id="json-text-input" rows="6"
-                    placeholder='{"mockItems":[...],"managedSeries":[...],"appTitle":"Gachive"}'
+                    placeholder='{"mockItems":[...],"managedSeries":[...],"appTitle":"Gachive","appSettings":{"showScrollTop":true}}'
                     style="margin:6px 0 8px;resize:vertical;font-family:'Space Mono',monospace;font-size:12px;"></textarea>
                 <button class="secondary" onclick="importJsonText()" style="width:100%;">붙여넣은 JSON 불러오기</button>
                 <p class="muted" style="margin:8px 0 0;">※ 현재 데이터가 붙여넣은 JSON 내용으로 교체됩니다.</p>
@@ -666,6 +747,20 @@ button.secondary{background:#8A84A8;}
             <input type="text" id="app-title-input" placeholder="새로운 이름을 입력하세요" style="width:100%;margin:0 0 8px 0;">
             <button onclick="changeAppTitle()" style="width:100%;">이름 변경하기</button>
         </div>
+
+        <div class="card">
+            <h4 style="margin:0 0 10px 0;">화면 설정</h4>
+            <div class="setting-row">
+                <div>
+                    <b style="font-size:13px;">맨 위로 버튼</b>
+                    <div class="muted" style="margin-top:3px;">스크롤을 내리면 오른쪽 아래에 ↑ 버튼을 표시합니다.</div>
+                </div>
+                <label class="toggle-switch" aria-label="맨 위로 버튼 표시">
+                    <input id="scroll-top-toggle" type="checkbox" onchange="setScrollTopEnabled(this.checked)">
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -675,6 +770,9 @@ button.secondary{background:#8A84A8;}
     <h3 id="sheet-title" style="margin-top:0;">상세 내역</h3>
     <div id="sheet-content"></div>
 </div>
+
+
+<button id="scroll-top-btn" class="scroll-top-btn" onclick="scrollToPageTop()" aria-label="맨 위로 이동" title="맨 위로">↑</button>
 
 	<div class="bottom-nav">
 		<div class="nav-item active" onclick="switchTab('calendar', this)">
@@ -708,6 +806,7 @@ let currentDate=new Date(2026,7,1);
 let expensePieChart=null;
 let salePieChart=null;
 let ledgerTypeFilter='all';
+let appSettings={showScrollTop:true};
 
 function cloneSeedItems(){return SEED_ITEMS.map(v=>({...v}));}
 function won(n){return Number(n||0).toLocaleString()+'원';}
@@ -794,7 +893,7 @@ function isExpenseOnlySeries(series){
     return normalized==='배송비'||normalized==='택배비'||normalized==='수수료';
 }
 function saveState(){
-    try{localStorage.setItem(STORAGE_KEY,JSON.stringify({mockItems,managedSeries,appTitle:getAppTitle()}));}
+    try{localStorage.setItem(STORAGE_KEY,JSON.stringify({mockItems,managedSeries,appTitle:getAppTitle(),appSettings}));}
     catch(e){console.warn('저장 실패:',e);}
 }
 function loadState(){
@@ -804,12 +903,16 @@ function loadState(){
             const data=JSON.parse(raw);
             managedSeries=Array.isArray(data.managedSeries)&&data.managedSeries.length?data.managedSeries.slice():SEED_SERIES.slice();
             mockItems=(Array.isArray(data.mockItems)?data.mockItems:cloneSeedItems()).map(normalizeItem);
+            appSettings={
+                showScrollTop:data.appSettings?.showScrollTop!==false
+            };
             document.querySelector('header .title').innerHTML=`🧸 ${escapeHtml(data.appTitle||DEFAULT_TITLE)}`;
             return;
         }
     }catch(e){console.warn('불러오기 실패, 기본 데이터 사용:',e);}
     managedSeries=SEED_SERIES.slice();
     mockItems=cloneSeedItems().map(normalizeItem);
+    appSettings={showScrollTop:true};
 }
 
 function getTransactions(){
@@ -1152,10 +1255,11 @@ function renderLedgerList(){
     const mon=document.getElementById('ledger-month-filter')?.value||localTodayString().slice(5,7);
     const isYearly=mon==='all';
     const selectedSeries=document.getElementById('ledger-series-filter')?.value||'';
+    const search=(document.getElementById('ledger-search')?.value||'').trim().toLowerCase();
 
     const label=ledgerTypeFilter==='expense'?'구매':ledgerTypeFilter==='income'?'판매':'전체';
 
-    // 요약은 아래의 전체/구매/판매 및 시리즈 필터와 분리해서
+    // 요약은 아래의 검색/전체/구매/판매/시리즈 필터와 분리해서
     // 선택한 월(또는 연도 전체)의 모든 거래를 기준으로 계산한다.
     const summaryTx=getTransactions().filter(t=>t.date.startsWith(period));
     const expense=summaryTx.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
@@ -1167,11 +1271,14 @@ function renderLedgerList(){
     document.getElementById('ledger-expense').innerText=won(expense);
     document.getElementById('ledger-net').innerText=won(expense-income);
 
-    // 아래 내역 목록에만 전체/구매/판매 + 시리즈 필터를 적용한다.
-    const tx=summaryTx.filter(t=>
-        (ledgerTypeFilter==='all'||t.type===ledgerTypeFilter)&&
-        (!selectedSeries||t.category===selectedSeries)
-    );
+    // 아래 내역 목록에만 검색 + 전체/구매/판매 + 시리즈 필터를 적용한다.
+    const tx=summaryTx.filter(t=>{
+        const matchesType=(ledgerTypeFilter==='all'||t.type===ledgerTypeFilter);
+        const matchesSeries=(!selectedSeries||t.category===selectedSeries);
+        const targetText=`${String(t.itemName||'')} ${String(t.category||'')} ${String(t.note||'')} ${String(t.location||'')}`.toLowerCase();
+        const matchesSearch=!search||targetText.includes(search);
+        return matchesType&&matchesSeries&&matchesSearch;
+    });
 
     document.getElementById('ledger-list-title').innerText=
         isYearly?`${year}년 ${label} 내역`:`${Number(mon)}월 ${label} 내역`;
@@ -1196,6 +1303,7 @@ function toggleNewItemForm(){
     header.classList.toggle('open',opening);body.classList.toggle('open',opening);
     if(opening)document.getElementById('new-name')?.focus();
 }
+
 function goToAddItem(dateStr){
     closeSheet();
     document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
@@ -1852,6 +1960,27 @@ function deleteSeries(index){
     renderSeriesControls();
     renderSeriesManager();
 }
+function setScrollTopEnabled(enabled){
+    appSettings.showScrollTop=Boolean(enabled);
+    saveState();
+    updateScrollTopButton();
+}
+
+function updateScrollTopButton(){
+    const button=document.getElementById('scroll-top-btn');
+    const toggle=document.getElementById('scroll-top-toggle');
+    const enabled=appSettings.showScrollTop!==false;
+
+    if(toggle)toggle.checked=enabled;
+    if(button)button.classList.toggle('show',enabled&&window.scrollY>260);
+}
+
+function scrollToPageTop(){
+    window.scrollTo({top:0,behavior:'smooth'});
+}
+
+window.addEventListener('scroll',updateScrollTopButton,{passive:true});
+
 function changeAppTitle(){const title=document.getElementById('app-title-input').value.trim();if(title){document.querySelector('header .title').innerHTML=`🧸 ${escapeHtml(title)}`;saveState();alert('앱 이름이 저장되었습니다.');}}
 
 async function exportExcel(){
@@ -2095,12 +2224,12 @@ function importExcel(event){
     reader.readAsArrayBuffer(file);
 }
 function exportData(){
-    const data={mockItems,managedSeries,appTitle:getAppTitle()};
+    const data={mockItems,managedSeries,appTitle:getAppTitle(),appSettings};
     const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`gachive-backup-${localTodayString()}.json`;document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
 }
 function importData(event){
     const file=event.target.files?.[0];if(!file)return;const reader=new FileReader();
-    reader.onload=e=>{try{const data=JSON.parse(e.target.result);if(Array.isArray(data.managedSeries)&&data.managedSeries.length)managedSeries=data.managedSeries;if(Array.isArray(data.mockItems))mockItems=data.mockItems.map(normalizeItem);if(data.appTitle)document.querySelector('header .title').innerHTML=`🧸 ${escapeHtml(data.appTitle)}`;saveState();renderAll();alert('데이터를 불러왔습니다.');}catch(err){alert('JSON 파일을 읽는 중 오류가 발생했습니다.');}event.target.value='';};
+    reader.onload=e=>{try{const data=JSON.parse(e.target.result);if(Array.isArray(data.managedSeries)&&data.managedSeries.length)managedSeries=data.managedSeries;if(Array.isArray(data.mockItems))mockItems=data.mockItems.map(normalizeItem);if(data.appTitle)document.querySelector('header .title').innerHTML=`🧸 ${escapeHtml(data.appTitle)}`;if(data.appSettings&&typeof data.appSettings==='object')appSettings={showScrollTop:data.appSettings.showScrollTop!==false};saveState();renderAll();updateScrollTopButton();alert('데이터를 불러왔습니다.');}catch(err){alert('JSON 파일을 읽는 중 오류가 발생했습니다.');}event.target.value='';};
     reader.readAsText(file);
 }
 
@@ -2138,6 +2267,10 @@ function importJsonText(){
             document.querySelector('header .title').innerHTML=`🧸 ${escapeHtml(data.appTitle)}`;
         }
 
+        if(data.appSettings&&typeof data.appSettings==='object'){
+            appSettings={showScrollTop:data.appSettings.showScrollTop!==false};
+        }
+
         saveState();
         renderAll();
 
@@ -2149,7 +2282,7 @@ function importJsonText(){
     }
 }
 
-function resetAllData(){if(!confirm('기본 예시 데이터로 초기화할까요?'))return;managedSeries=SEED_SERIES.slice();mockItems=cloneSeedItems().map(normalizeItem);document.querySelector('header .title').innerHTML=`🧸 ${DEFAULT_TITLE}`;saveState();renderAll();alert('기본 데이터로 초기화되었습니다.');}
+function resetAllData(){if(!confirm('기본 예시 데이터로 초기화할까요?'))return;managedSeries=SEED_SERIES.slice();mockItems=cloneSeedItems().map(normalizeItem);appSettings={showScrollTop:true};document.querySelector('header .title').innerHTML=`🧸 ${DEFAULT_TITLE}`;saveState();renderAll();updateScrollTopButton();alert('기본 데이터로 초기화되었습니다.');}
 
 function renderAll(){
     renderSeriesControls();
@@ -2170,6 +2303,7 @@ function renderAll(){
     try{renderStats();}catch(e){console.warn('구매 통계 렌더링 생략:',e);}
     try{renderSaleStats();}catch(e){console.warn('판매 통계 렌더링 생략:',e);}
     try{renderTotalStats();}catch(e){console.warn('전체 통계 렌더링 생략:',e);}
+    updateScrollTopButton();
 }
 function initApp(){
     loadState();
