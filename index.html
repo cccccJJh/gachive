@@ -1455,9 +1455,12 @@ function openItemEditor(id){
             <input id="edit-fav" type="checkbox" ${p.fav?'checked':''} style="width:auto;margin:0;"> ⭐ 최애 등록
         </label>
 
-        <div class="form-actions">
-            <button class="danger" onclick="deleteCollectionItem(${p.id})">삭제</button>
+        <div class="form-actions" style="margin-top:16px;">
             <button onclick="saveCollectionItem(${p.id})">수정 저장</button>
+        </div>
+
+        <div style="margin-top:18px;padding-top:14px;border-top:1px dashed var(--line);">
+            <button class="danger" onclick="deleteCollectionItem(${p.id})" style="width:100%;">삭제</button>
         </div>`;
     openSheet(html);
 }
