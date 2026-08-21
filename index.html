@@ -988,9 +988,11 @@ function renderLedgerMonthOptions(){
 
     const months=availableMonths.length?availableMonths:[currentMonth];
 
-    monthSelect.innerHTML=months.map(mon=>`<option value="${mon}">${Number(mon)}월</option>`).join('');
+    monthSelect.innerHTML=
+        '<option value="all">전체</option>'+
+        months.map(mon=>`<option value="${mon}">${Number(mon)}월</option>`).join('');
 
-    if(previous&&months.includes(previous)){
+    if(previous==='all'||months.includes(previous)){
         monthSelect.value=previous;
     }else if(year===currentYear&&months.includes(currentMonth)){
         monthSelect.value=currentMonth;
@@ -1002,7 +1004,7 @@ function renderLedgerMonthOptions(){
 function getSelectedLedgerMonth(){
     const year=document.getElementById('ledger-year-filter')?.value||localTodayString().slice(0,4);
     const mon=document.getElementById('ledger-month-filter')?.value||localTodayString().slice(5,7);
-    return `${year}-${mon}`;
+    return mon==='all'?year:`${year}-${mon}`;
 }
 
 
@@ -1145,25 +1147,34 @@ function setLedgerTypeFilter(type,el){
 }
 
 function renderLedgerList(){
-    const month=getSelectedLedgerMonth();
-    const [year,mon]=month.split('-');
+    const period=getSelectedLedgerMonth();
+    const year=document.getElementById('ledger-year-filter')?.value||localTodayString().slice(0,4);
+    const mon=document.getElementById('ledger-month-filter')?.value||localTodayString().slice(5,7);
+    const isYearly=mon==='all';
     const selectedSeries=document.getElementById('ledger-series-filter')?.value||'';
 
     const label=ledgerTypeFilter==='expense'?'구매':ledgerTypeFilter==='income'?'판매':'전체';
-    document.getElementById('ledger-summary-title').innerText=`${year}년 ${Number(mon)}월 요약`;
-    document.getElementById('ledger-list-title').innerText=`${Number(mon)}월 ${label} 내역`;
 
-    const tx=getTransactions().filter(t=>
-        t.date.startsWith(month)&&
+    // 요약은 아래의 전체/구매/판매 및 시리즈 필터와 분리해서
+    // 선택한 월(또는 연도 전체)의 모든 거래를 기준으로 계산한다.
+    const summaryTx=getTransactions().filter(t=>t.date.startsWith(period));
+    const expense=summaryTx.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
+    const income=summaryTx.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0);
+
+    document.getElementById('ledger-summary-title').innerText=
+        isYearly?`${year}년 요약`:`${year}년 ${Number(mon)}월 요약`;
+    document.getElementById('ledger-income').innerText=won(income);
+    document.getElementById('ledger-expense').innerText=won(expense);
+    document.getElementById('ledger-net').innerText=won(expense-income);
+
+    // 아래 내역 목록에만 전체/구매/판매 + 시리즈 필터를 적용한다.
+    const tx=summaryTx.filter(t=>
         (ledgerTypeFilter==='all'||t.type===ledgerTypeFilter)&&
         (!selectedSeries||t.category===selectedSeries)
     );
 
-    const expense=tx.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
-    const income=tx.filter(t=>t.type==='income').reduce((s,t)=>s+t.amount,0);
-    document.getElementById('ledger-income').innerText=won(income);
-    document.getElementById('ledger-expense').innerText=won(expense);
-    document.getElementById('ledger-net').innerText=won(expense-income);
+    document.getElementById('ledger-list-title').innerText=
+        isYearly?`${year}년 ${label} 내역`:`${Number(mon)}월 ${label} 내역`;
 
     document.getElementById('ledger-list').innerHTML=tx.length
         ? tx.map(t=>`<li class="item-row">
