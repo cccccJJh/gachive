@@ -11,6 +11,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Jua&family=Pretendard+Std:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/exceljs/dist/exceljs.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root{
     --navy:#1B2545;
@@ -427,6 +428,15 @@ button.secondary{background:#8A84A8;}
 .toggle-switch input:checked + .toggle-slider::after{
     transform:translateX(20px);
 }
+.sync-sql{
+    font-family:'Space Mono',monospace;
+    font-size:11px;
+    line-height:1.45;
+    min-height:140px;
+    resize:vertical;
+    white-space:pre;
+}
+.card a{color:var(--sr);}
 
 </style>
 </head>
@@ -476,7 +486,7 @@ button.secondary{background:#8A84A8;}
                 </div>
                 <div style="display:flex;gap:8px;margin-bottom:8px;">
                     <div style="flex:1;"><label class="muted">구입금액 (총액)</label><input id="new-purchase-price" type="number" min="0" placeholder="예: 20000" style="margin:2px 0 0;"></div>
-                    <div style="flex:1;"><label class="muted">획득일</label><input id="new-acquired" type="date" value="2026-08-12" style="margin:2px 0 0;"></div>
+                    <div style="flex:1;"><label class="muted">획득일</label><input id="new-acquired" type="date" style="margin:2px 0 0;"></div>
                 </div>
                 <div style="margin-bottom:8px;">
                     <label class="muted">구입 위치</label><input id="new-location" type="text" placeholder="예: 홍대 가챠샵" style="margin:2px 0 0;">
@@ -596,7 +606,11 @@ button.secondary{background:#8A84A8;}
                     <span id="total-stat-avg-spend" class="value">0원</span>
                 </div>
             </div>
-            <p class="muted" style="margin:10px 0 0;text-align:center;">#이 포함된 아이템은 전체 통계에서 제외됩니다.</p>
+            <div class="stat-pill" style="margin-top:8px;">
+                <span>🚚 배송비 · 수수료</span>
+                <span id="total-stat-shipping" class="num">0원</span>
+            </div>
+            <p class="muted" style="margin:10px 0 0;text-align:center;">배송비/수수료는 총 구매·뽑기기록·달력에 포함되고, 컬렉션에는 나오지 않습니다.<br>#이 붙은 일반 아이템은 통계에서 제외됩니다.</p>
         </div>
 
         <div class="card">
@@ -629,6 +643,10 @@ button.secondary{background:#8A84A8;}
             <div class="stat-pill">
                 <span>💳 총 구매금액</span>
                 <span class="num" id="stat-total-purchase">0원</span>
+            </div>
+            <div class="stat-pill">
+                <span>🚚 배송비 · 수수료</span>
+                <span class="num" id="stat-shipping">0원</span>
             </div>
             <div class="stat-pill">
                 <span>💸 개당 평균 구매금액</span>
@@ -695,14 +713,15 @@ button.secondary{background:#8A84A8;}
 <!-- 5. 설정 -->
 <div id="tab-settings" class="tab-content">
     <div class="sub-tab">
-        <div id="sub-btn-set-cat" class="sub-tab-item active" onclick="switchSubTab('set','cat')">시리즈 관리</div>
-        <div id="sub-btn-set-backup" class="sub-tab-item" onclick="switchSubTab('set','backup')">데이터 백업</div>
-        <div id="sub-btn-set-name" class="sub-tab-item" onclick="switchSubTab('set','name')">앱 설정</div>
+        <div id="sub-btn-set-cat" class="sub-tab-item active" style="font-size:11px;" onclick="switchSubTab('set','cat')">시리즈 관리</div>
+        <div id="sub-btn-set-backup" class="sub-tab-item" style="font-size:11px;" onclick="switchSubTab('set','backup')">데이터 백업</div>
+        <div id="sub-btn-set-sync" class="sub-tab-item" style="font-size:11px;" onclick="switchSubTab('set','sync')">동기화</div>
+        <div id="sub-btn-set-name" class="sub-tab-item" style="font-size:11px;" onclick="switchSubTab('set','name')">앱 설정</div>
     </div>
     <div id="sub-set-cat" class="sub-content active">
         <div class="card">
             <h4 style="margin:0 0 6px 0;">시리즈 관리</h4>
-            <p class="muted" style="margin:0 0 12px 0;line-height:1.5;">컬렉션 등록·수정·검색에서 공통으로 사용하는 시리즈입니다.<br>※ <b>배송비 / 수수료</b>는 지출 내역에는 포함되지만 컬렉션/시리즈 통계에서는 제외됩니다.</p>
+            <p class="muted" style="margin:0 0 12px 0;line-height:1.5;">컬렉션 등록·수정·검색에서 공통으로 사용하는 시리즈입니다.<br>※ <b>배송비 / 수수료</b>로 등록하면 달력·뽑기기록·통계의 구매 금액에는 포함되고, 컬렉션/보유현황에는 나오지 않습니다.</p>
             <div style="display:flex;gap:5px;"><input id="series-name-input" type="text" placeholder="예: 우주 캡슐" style="margin:0;" onkeydown="if(event.key==='Enter') addSeries()"><button onclick="addSeries()" style="width:70px;margin:0;">추가</button></div>
             <ul id="series-manage-list" class="item-list" style="margin-top:10px;"></ul>
         </div>
@@ -736,6 +755,45 @@ button.secondary{background:#8A84A8;}
             <h4 style="color:var(--coin-red);margin:0 0 5px 0;">⚠️ 위험 구역: 데이터 초기화</h4>
             <p class="muted" style="margin-bottom:10px;">저장된 데이터를 기본 예시 데이터로 초기화합니다.</p>
             <button class="danger" style="width:100%;" onclick="resetAllData()">기본 데이터로 초기화</button>
+        </div>
+    </div>
+    <div id="sub-set-sync" class="sub-content">
+        <div class="card">
+            <h4 style="margin:0 0 6px 0;">Supabase 동기화</h4>
+            <p class="muted" style="margin:0 0 12px 0;line-height:1.55;">같은 접속 코드를 쓰는 폰/노트북끼리 컬렉션을 주고받습니다.<br>나중 저장이 이깁니다. 동시에 고치면 한쪽이 덮일 수 있어요.</p>
+            <ol class="muted" style="margin:0 0 12px 18px;padding:0;line-height:1.6;">
+                <li><a href="https://supabase.com" target="_blank" rel="noopener">supabase.com</a>에서 프로젝트 만들기 (무료)</li>
+                <li>Project Settings → API에서 URL / anon key 복사</li>
+                <li>SQL Editor에 아래 SQL을 붙여넣고 Run</li>
+                <li>이 화면에 URL, 키, 접속 코드를 넣고 저장</li>
+            </ol>
+            <textarea id="sync-sql" class="sync-sql" readonly></textarea>
+            <button class="secondary" style="width:100%;margin-top:8px;" onclick="copySyncSql()">SQL 복사</button>
+        </div>
+        <div class="card">
+            <h4 style="margin:0 0 10px 0;">연결 정보</h4>
+            <label class="muted">Project URL</label>
+            <input id="sync-url" type="url" placeholder="https://xxxx.supabase.co" autocomplete="off">
+            <label class="muted">anon public key</label>
+            <textarea id="sync-anon-key" rows="3" placeholder="eyJ..." style="resize:vertical;font-family:'Space Mono',monospace;font-size:11px;"></textarea>
+            <label class="muted">접속 코드 (둘이 같은 코드)</label>
+            <input id="sync-code" type="text" placeholder="예: gachive-우리만" autocomplete="off">
+            <div class="setting-row" style="margin:12px 0 14px;">
+                <div>
+                    <b style="font-size:13px;">저장할 때마다 자동 업로드</b>
+                    <div class="muted" style="margin-top:3px;">이 기기에서 바꾼 내용을 코드로 올립니다.</div>
+                </div>
+                <label class="toggle-switch" aria-label="자동 업로드">
+                    <input id="sync-auto-toggle" type="checkbox" onchange="setAutoSyncEnabled(this.checked)">
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+            <button style="width:100%;" onclick="saveSyncSettings()">연결 정보 저장</button>
+            <div class="backup-row" style="margin-top:8px;">
+                <button class="secondary" onclick="pushToCloud()">지금 올리기</button>
+                <button class="secondary" onclick="pullFromCloud()">지금 불러오기</button>
+            </div>
+            <p class="muted" id="sync-status" style="margin:10px 0 0;">아직 연결되지 않았습니다.</p>
         </div>
     </div>
     <div id="sub-set-name" class="sub-content">
@@ -796,12 +854,75 @@ const SEED_ITEMS=[
     {id:6,name:'판다 시크릿',series:'동물 피규어',status:'sold',acquired:'2026-06-20',purchasePrice:10000,location:'홍대 가챠샵',fav:false,soldDate:'2026-08-10',salePrice:8000,note:'도색 상태가 아쉬워서 판매.'},
     {id:7,name:'캐릭터 키링 A',series:'캐릭터 키링',status:'held',acquired:'2026-08-12',purchasePrice:15000,location:'홍대 가챠샵',fav:false,soldDate:'',salePrice:0,note:'키링용으로 보유 중.'}
 ];
-const SEED_SERIES=['동물 피규어','미니어처 소품','캐릭터 키링','빵 스트랩'];
+const SEED_SERIES=['동물 피규어','미니어처 소품','캐릭터 키링','빵 스트랩','배송비','수수료'];
 let mockItems=[];
 let managedSeries=[];
-let currentDate=new Date(2026,7,1);
+let currentDate=new Date();
 let ledgerTypeFilter='all';
-let appSettings={showScrollTop:true};
+let appSettings={showScrollTop:true,supabaseUrl:'',supabaseAnonKey:'',syncCode:'',autoSync:false};
+let supabaseClient=null;
+let supabaseClientKey='';
+let cloudPushTimer=null;
+let applyingCloud=false;
+
+const GACHIVE_SYNC_SQL=`-- Gachive 동기화 (SQL Editor에서 한 번 실행)
+create table if not exists public.gachive_saves (
+  code_hash text primary key,
+  payload jsonb not null,
+  updated_at timestamptz not null default now()
+);
+
+alter table public.gachive_saves enable row level security;
+
+revoke all on table public.gachive_saves from public, anon, authenticated;
+
+create or replace function public.gachive_load(p_code text)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  result jsonb;
+begin
+  if p_code is null or length(trim(p_code)) < 4 then
+    return null;
+  end if;
+  select payload into result
+  from public.gachive_saves
+  where code_hash = encode(sha256(convert_to(trim(p_code), 'utf8')), 'hex');
+  return result;
+end;
+$$;
+
+create or replace function public.gachive_save(p_code text, p_payload jsonb)
+returns timestamptz
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  h text;
+  ts timestamptz := now();
+begin
+  if p_code is null or length(trim(p_code)) < 4 then
+    raise exception 'code too short';
+  end if;
+  if p_payload is null then
+    raise exception 'payload required';
+  end if;
+  h := encode(sha256(convert_to(trim(p_code), 'utf8')), 'hex');
+  insert into public.gachive_saves(code_hash, payload, updated_at)
+  values (h, p_payload, ts)
+  on conflict (code_hash)
+  do update set payload = excluded.payload, updated_at = excluded.updated_at;
+  return ts;
+end;
+$$;
+
+grant execute on function public.gachive_load(text) to anon, authenticated;
+grant execute on function public.gachive_save(text, jsonb) to anon, authenticated;
+`;
 
 function cloneSeedItems(){return SEED_ITEMS.map(v=>({...v}));}
 function won(n){return Number(n||0).toLocaleString()+'원';}
@@ -879,7 +1000,7 @@ function saleHistoryLabel(item){
 }
 
 function getAppTitle(){return document.querySelector('header .title').textContent.replace(/^🧸\s*/,'').trim()||DEFAULT_TITLE;}
-function isHiddenItem(item){return String(item?.name||'').includes('#');}
+function isHiddenItem(item){return String(item?.name||'').includes('#')&&!isExpenseOnlyItem(item);}
 function isExpenseOnlySeries(series){
     const normalized=String(series||'')
         .trim()
@@ -887,9 +1008,42 @@ function isExpenseOnlySeries(series){
         .trim();
     return normalized==='배송비'||normalized==='택배비'||normalized==='수수료';
 }
+function isExpenseOnlyItem(item){
+    return isExpenseOnlySeries(item?.series)||isExpenseOnlySeries(item?.name);
+}
+function isExpenseOnlyTx(t){
+    return isExpenseOnlySeries(t?.category)||isExpenseOnlySeries(t?.itemName);
+}
+function sumExpenseOnly(tx){
+    return (tx||[]).filter(t=>t.type==='expense'&&isExpenseOnlyTx(t))
+        .reduce((s,t)=>s+Number(t.amount||0),0);
+}
+function ensureExpenseSeries(){
+    ['배송비','수수료'].forEach(name=>{
+        if(!managedSeries.includes(name))managedSeries.push(name);
+    });
+}
+function defaultAppSettings(){
+    return {showScrollTop:true,supabaseUrl:'',supabaseAnonKey:'',syncCode:'',autoSync:false};
+}
+function mergeAppSettings(raw, fallback){
+    const base=Object.assign(defaultAppSettings(), fallback||{});
+    if(!raw||typeof raw!=='object')return base;
+    const incomingUrl=String(raw.supabaseUrl||'').trim();
+    const incomingKey=String(raw.supabaseAnonKey||'').trim();
+    const incomingCode=String(raw.syncCode||'').trim();
+    return {
+        showScrollTop:raw.showScrollTop!==false,
+        supabaseUrl:incomingUrl||base.supabaseUrl||'',
+        supabaseAnonKey:incomingKey||base.supabaseAnonKey||'',
+        syncCode:incomingCode||base.syncCode||'',
+        autoSync:raw.autoSync!=null?Boolean(raw.autoSync):Boolean(base.autoSync)
+    };
+}
 function saveState(){
     try{localStorage.setItem(STORAGE_KEY,JSON.stringify({mockItems,managedSeries,appTitle:getAppTitle(),appSettings}));}
     catch(e){console.warn('저장 실패:',e);}
+    scheduleCloudPush();
 }
 function loadState(){
     try{
@@ -898,22 +1052,172 @@ function loadState(){
             const data=JSON.parse(raw);
             managedSeries=Array.isArray(data.managedSeries)&&data.managedSeries.length?data.managedSeries.slice():SEED_SERIES.slice();
             mockItems=(Array.isArray(data.mockItems)?data.mockItems:cloneSeedItems()).map(normalizeItem);
-            appSettings={
-                showScrollTop:data.appSettings?.showScrollTop!==false
-            };
+            appSettings=mergeAppSettings(data.appSettings);
             document.querySelector('header .title').innerHTML=`🧸 ${escapeHtml(data.appTitle||DEFAULT_TITLE)}`;
+            ensureExpenseSeries();
             return;
         }
     }catch(e){console.warn('불러오기 실패, 기본 데이터 사용:',e);}
     managedSeries=SEED_SERIES.slice();
     mockItems=cloneSeedItems().map(normalizeItem);
-    appSettings={showScrollTop:true};
+    appSettings=defaultAppSettings();
+    ensureExpenseSeries();
+}
+
+function setSyncStatus(msg){
+    const el=document.getElementById('sync-status');
+    if(el)el.textContent=msg||'';
+}
+function isSyncReady(){
+    return !!(appSettings.supabaseUrl&&appSettings.supabaseAnonKey&&(appSettings.syncCode||'').trim().length>=4);
+}
+function getSupabaseClient(){
+    const url=String(appSettings.supabaseUrl||'').trim();
+    const key=String(appSettings.supabaseAnonKey||'').trim();
+    if(!url||!key)return null;
+    if(!window.supabase||typeof window.supabase.createClient!=='function'){
+        throw new Error('Supabase 라이브러리를 불러오지 못했습니다. 인터넷 연결을 확인해주세요.');
+    }
+    const stamp=url+'\n'+key;
+    if(!supabaseClient||supabaseClientKey!==stamp){
+        supabaseClient=window.supabase.createClient(url,key);
+        supabaseClientKey=stamp;
+    }
+    return supabaseClient;
+}
+function buildCloudPayload(){
+    return {
+        mockItems,
+        managedSeries,
+        appTitle:getAppTitle()
+    };
+}
+function applyCloudPayload(payload){
+    if(!payload||typeof payload!=='object')return false;
+    if(Array.isArray(payload.managedSeries)&&payload.managedSeries.length){
+        managedSeries=payload.managedSeries.slice();
+    }
+    if(Array.isArray(payload.mockItems)){
+        mockItems=payload.mockItems.map(normalizeItem);
+    }else{
+        return false;
+    }
+    if(payload.appTitle){
+        document.querySelector('header .title').innerHTML=`🧸 ${escapeHtml(payload.appTitle)}`;
+    }
+    ensureExpenseSeries();
+    return true;
+}
+function renderSyncSettings(){
+    const sql=document.getElementById('sync-sql');
+    if(sql)sql.value=GACHIVE_SYNC_SQL;
+    const url=document.getElementById('sync-url');
+    const key=document.getElementById('sync-anon-key');
+    const code=document.getElementById('sync-code');
+    const auto=document.getElementById('sync-auto-toggle');
+    if(url&&document.activeElement!==url)url.value=appSettings.supabaseUrl||'';
+    if(key&&document.activeElement!==key)key.value=appSettings.supabaseAnonKey||'';
+    if(code&&document.activeElement!==code)code.value=appSettings.syncCode||'';
+    if(auto)auto.checked=!!appSettings.autoSync;
+    if(!isSyncReady())setSyncStatus('아직 연결되지 않았습니다.');
+    else setSyncStatus(appSettings.autoSync?'연결됨 · 자동 업로드 켜짐':'연결됨 · 필요할 때 올리기/불러오기');
+}
+function saveSyncSettings(){
+    appSettings.supabaseUrl=(document.getElementById('sync-url')?.value||'').trim();
+    appSettings.supabaseAnonKey=(document.getElementById('sync-anon-key')?.value||'').trim();
+    appSettings.syncCode=(document.getElementById('sync-code')?.value||'').trim();
+    appSettings.autoSync=!!document.getElementById('sync-auto-toggle')?.checked;
+    if(appSettings.syncCode&&appSettings.syncCode.length<4){
+        alert('접속 코드는 4자 이상으로 해주세요.');
+        return;
+    }
+    saveState();
+    renderSyncSettings();
+    alert('연결 정보를 이 기기에 저장했습니다.');
+}
+function setAutoSyncEnabled(enabled){
+    appSettings.autoSync=Boolean(enabled);
+    saveState();
+    renderSyncSettings();
+}
+async function copySyncSql(){
+    const text=GACHIVE_SYNC_SQL;
+    try{
+        await navigator.clipboard.writeText(text);
+        setSyncStatus('SQL을 복사했습니다. Supabase SQL Editor에 붙여넣으세요.');
+    }catch(e){
+        const sql=document.getElementById('sync-sql');
+        if(sql){sql.focus();sql.select();}
+        alert('복사에 실패했습니다. SQL 칸을 길게 눌러 복사해주세요.');
+    }
+}
+function scheduleCloudPush(){
+    if(applyingCloud||!appSettings.autoSync||!isSyncReady())return;
+    clearTimeout(cloudPushTimer);
+    cloudPushTimer=setTimeout(()=>{pushToCloud({quiet:true});},1200);
+}
+async function pushToCloud(opts={}){
+    const quiet=!!opts.quiet;
+    if(!isSyncReady()){
+        if(!quiet)alert('URL, anon key, 접속 코드(4자 이상)를 먼저 저장해주세요.');
+        return;
+    }
+    try{
+        const client=getSupabaseClient();
+        const {error}=await client.rpc('gachive_save',{
+            p_code:appSettings.syncCode.trim(),
+            p_payload:buildCloudPayload()
+        });
+        if(error)throw error;
+        setSyncStatus('클라우드에 올렸습니다. '+new Date().toLocaleTimeString());
+        if(!quiet)alert('이 기기 데이터를 클라우드에 올렸습니다.');
+    }catch(err){
+        console.warn(err);
+        const msg=err?.message||String(err);
+        setSyncStatus('올리기 실패: '+msg);
+        if(!quiet)alert('올리기에 실패했습니다.\nSQL을 실행했는지, URL/키를 확인해주세요.\n'+msg);
+    }
+}
+async function pullFromCloud(){
+    if(!isSyncReady()){
+        alert('URL, anon key, 접속 코드(4자 이상)를 먼저 저장해주세요.');
+        return;
+    }
+    if(!confirm('클라우드에 저장된 데이터로 이 기기를 덮을까요?'))return;
+    try{
+        const client=getSupabaseClient();
+        const {data,error}=await client.rpc('gachive_load',{p_code:appSettings.syncCode.trim()});
+        if(error)throw error;
+        if(!data){
+            alert('이 코드로 저장된 데이터가 없습니다. 먼저 이 기기에서 올려주세요.');
+            setSyncStatus('클라우드에 아직 데이터가 없습니다.');
+            return;
+        }
+        applyingCloud=true;
+        const ok=applyCloudPayload(data);
+        if(!ok){
+            applyingCloud=false;
+            alert('클라우드 데이터 형식을 읽지 못했습니다.');
+            return;
+        }
+        saveState();
+        applyingCloud=false;
+        renderAll();
+        setSyncStatus('클라우드에서 불러왔습니다. '+new Date().toLocaleTimeString());
+        alert('클라우드 데이터를 불러왔습니다.');
+    }catch(err){
+        applyingCloud=false;
+        console.warn(err);
+        const msg=err?.message||String(err);
+        setSyncStatus('불러오기 실패: '+msg);
+        alert('불러오기에 실패했습니다.\nSQL을 실행했는지, URL/키/코드를 확인해주세요.\n'+msg);
+    }
 }
 
 function getTransactions(){
     const tx=[];
     mockItems.forEach(item=>{
-        if(isHiddenItem(item))return;
+        if(isHiddenItem(item)&&!isExpenseOnlyItem(item))return;
 
         const qty=Math.max(1,Number(item.quantity||1));
         if(item.acquired&&Number(item.purchasePrice)>0){
@@ -982,7 +1286,10 @@ function switchSubTab(main,sub){
     document.getElementById(`sub-btn-${main}-${sub}`).classList.add('active');
     document.getElementById(`sub-${main}-${sub}`).classList.add('active');
 }
-function changeMonth(dir){currentDate.setMonth(currentDate.getMonth()+dir);renderCalendar();}
+function changeMonth(dir){
+    currentDate=new Date(currentDate.getFullYear(), currentDate.getMonth()+dir, 1);
+    renderCalendar();
+}
 function localTodayString(){const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
 
 function renderCalendar(){
@@ -1338,7 +1645,7 @@ function renderCollection(){
     const status=document.getElementById('collection-status-filter')?.value||'';
 
     const filtered=mockItems.filter(p=>{
-        if(isExpenseOnlySeries(p.series))return false;
+        if(isExpenseOnlyItem(p))return false;
         syncItemSaleState(p);
 
         const matchesText=!q ||
@@ -1692,7 +1999,7 @@ function renderTotalStats(){
     const totalIncome=visibleTx.filter(t=>t.type==='income').reduce((sum,t)=>sum+Number(t.amount||0),0);
     const totalNet=totalExpense-totalIncome;
 
-    const pullItems=visibleItems.filter(item=>!isExpenseOnlySeries(item.series));
+    const pullItems=visibleItems.filter(item=>!isExpenseOnlyItem(item));
     const totalPulls=pullItems.reduce((sum,item)=>sum+Number(item.quantity||1),0);
     const pullSpend=pullItems.reduce((sum,item)=>sum+Number(item.purchasePrice||0),0);
 
@@ -1700,6 +2007,8 @@ function renderTotalStats(){
     document.getElementById('total-stat-avg-spend').innerText=won(totalPulls?Math.round(pullSpend/totalPulls):0);
     document.getElementById('total-stat-expense').innerText=won(totalExpense);
     document.getElementById('total-stat-income').innerText=won(totalIncome);
+    const shippingEl=document.getElementById('total-stat-shipping');
+    if(shippingEl)shippingEl.innerText=won(sumExpenseOnly(visibleTx));
 
     const netEl=document.getElementById('total-stat-net');
     netEl.innerText=won(totalNet);
@@ -1842,7 +2151,7 @@ function renderStats(){
 
     const monthItems=mockItems.filter(p=>
         !isHiddenItem(p) &&
-        !isExpenseOnlySeries(p.series) &&
+        !isExpenseOnlyItem(p) &&
         (p.acquired||'').startsWith(month)
     );
 
@@ -1854,6 +2163,11 @@ function renderStats(){
 
     document.getElementById('stat-pull-count').innerText=totalPurchases+'개';
     document.getElementById('stat-total-purchase').innerText=won(totalPurchaseAmount);
+    const shippingEl=document.getElementById('stat-shipping');
+    if(shippingEl){
+        const shippingTx=getTransactions().filter(t=>t.type==='expense'&&t.date.startsWith(month));
+        shippingEl.innerText=won(sumExpenseOnly(shippingTx));
+    }
     document.getElementById('stat-avg-spend').innerText=won(totalPurchases?Math.round(itemSpend/totalPurchases):0);
 
     const grouped={};
@@ -1878,7 +2192,7 @@ function renderStats(){
     const expenseHint=document.getElementById('stats-period-hint');
     if(expenseHint)expenseHint.textContent=statsPeriodHint(month);
 
-    const visibleItems=mockItems.filter(p=>!isHiddenItem(p)&&!isExpenseOnlySeries(p.series));
+    const visibleItems=mockItems.filter(p=>!isHiddenItem(p)&&!isExpenseOnlyItem(p));
     const groupSeriesList=[...new Set(visibleItems.map(p=>p.series).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ko'));
 
     document.getElementById('stats-plant-group-list').innerHTML=groupSeriesList.length
@@ -1903,7 +2217,7 @@ function renderStats(){
 }
 
 function openHoldingsSheet(series, opts={}){
-    const items=mockItems.filter(p=>!isHiddenItem(p)&&!isExpenseOnlySeries(p.series)&&p.series===series);
+    const items=mockItems.filter(p=>!isHiddenItem(p)&&!isExpenseOnlyItem(p)&&p.series===series);
     items.forEach(syncItemSaleState);
     const stockTotal=items.reduce((sum,p)=>sum+getStockQuantity(p),0);
 
@@ -1970,14 +2284,15 @@ function renderSeriesManager(){
 
     list.innerHTML=managedSeries.map((name,index)=>{
         const usedCount=mockItems.filter(item=>item.series===name).reduce((sum,item)=>sum+Number(item.quantity||1),0);
+        const expenseOnly=isExpenseOnlySeries(name);
         return `<li class="item-row">
             <div>
                 <span>${escapeHtml(name)}</span>
-                <span class="muted" style="margin-left:5px;">${usedCount}개 사용중</span>
+                <span class="muted" style="margin-left:5px;">${expenseOnly?'지출 전용':`${usedCount}개 사용중`}</span>
             </div>
             <div style="display:flex;gap:5px;flex:none;">
-                <button class="secondary" onclick="editSeries(${index})" style="padding:4px 8px;font-size:11px;">수정</button>
-                <button class="danger" onclick="deleteSeries(${index})" style="padding:4px 8px;font-size:11px;">삭제</button>
+                ${expenseOnly?'':`<button class="secondary" onclick="editSeries(${index})" style="padding:4px 8px;font-size:11px;">수정</button>
+                <button class="danger" onclick="deleteSeries(${index})" style="padding:4px 8px;font-size:11px;">삭제</button>`}
             </div>
         </li>`;
     }).join('');
@@ -1999,6 +2314,7 @@ function addSeries(){
 function editSeries(index){
     const oldName=managedSeries[index];
     if(!oldName)return;
+    if(isExpenseOnlySeries(oldName)){alert('배송비/수수료 시리즈 이름은 바꿀 수 없습니다.');return;}
 
     const newName=(prompt('수정할 시리즈명을 입력해주세요.',oldName)||'').trim();
     if(!newName||newName===oldName)return;
@@ -2023,6 +2339,7 @@ function editSeries(index){
 function deleteSeries(index){
     const name=managedSeries[index];
     if(!name)return;
+    if(isExpenseOnlySeries(name)){alert('배송비/수수료 시리즈는 삭제할 수 없습니다.');return;}
 
     if(mockItems.some(item=>item.series===name)){
         alert(`'${name}' 시리즈를 사용하는 컬렉션이 있어 삭제할 수 없습니다.`);
@@ -2368,7 +2685,7 @@ function exportData(){
 }
 function importData(event){
     const file=event.target.files?.[0];if(!file)return;const reader=new FileReader();
-    reader.onload=e=>{try{const data=JSON.parse(e.target.result);if(Array.isArray(data.managedSeries)&&data.managedSeries.length)managedSeries=data.managedSeries;if(Array.isArray(data.mockItems))mockItems=data.mockItems.map(normalizeItem);if(data.appTitle)document.querySelector('header .title').innerHTML=`🧸 ${escapeHtml(data.appTitle)}`;if(data.appSettings&&typeof data.appSettings==='object')appSettings={showScrollTop:data.appSettings.showScrollTop!==false};saveState();renderAll();updateScrollTopButton();alert('데이터를 불러왔습니다.');}catch(err){alert('JSON 파일을 읽는 중 오류가 발생했습니다.');}event.target.value='';};
+    reader.onload=e=>{try{const data=JSON.parse(e.target.result);if(Array.isArray(data.managedSeries)&&data.managedSeries.length)managedSeries=data.managedSeries;if(Array.isArray(data.mockItems))mockItems=data.mockItems.map(normalizeItem);if(data.appTitle)document.querySelector('header .title').innerHTML=`🧸 ${escapeHtml(data.appTitle)}`;if(data.appSettings&&typeof data.appSettings==='object')appSettings=mergeAppSettings(data.appSettings,appSettings);saveState();renderAll();updateScrollTopButton();alert('데이터를 불러왔습니다.');}catch(err){alert('JSON 파일을 읽는 중 오류가 발생했습니다.');}event.target.value='';};
     reader.readAsText(file);
 }
 
@@ -2407,7 +2724,7 @@ function importJsonText(){
         }
 
         if(data.appSettings&&typeof data.appSettings==='object'){
-            appSettings={showScrollTop:data.appSettings.showScrollTop!==false};
+            appSettings=mergeAppSettings(data.appSettings, appSettings);
         }
 
         saveState();
@@ -2421,9 +2738,28 @@ function importJsonText(){
     }
 }
 
-function resetAllData(){if(!confirm('기본 예시 데이터로 초기화할까요?'))return;managedSeries=SEED_SERIES.slice();mockItems=cloneSeedItems().map(normalizeItem);appSettings={showScrollTop:true};document.querySelector('header .title').innerHTML=`🧸 ${DEFAULT_TITLE}`;saveState();renderAll();updateScrollTopButton();alert('기본 데이터로 초기화되었습니다.');}
+function resetAllData(){
+    if(!confirm('기본 예시 데이터로 초기화할까요?'))return;
+    const keep=mergeAppSettings(appSettings);
+    managedSeries=SEED_SERIES.slice();
+    mockItems=cloneSeedItems().map(normalizeItem);
+    appSettings=Object.assign(defaultAppSettings(),{
+        supabaseUrl:keep.supabaseUrl,
+        supabaseAnonKey:keep.supabaseAnonKey,
+        syncCode:keep.syncCode,
+        autoSync:keep.autoSync
+    });
+    document.querySelector('header .title').innerHTML=`🧸 ${DEFAULT_TITLE}`;
+    applyingCloud=true;
+    saveState();
+    applyingCloud=false;
+    renderAll();
+    updateScrollTopButton();
+    alert('기본 데이터로 초기화되었습니다.');
+}
 
 function renderAll(){
+    ensureExpenseSeries();
     renderSeriesControls();
     renderSeriesManager();
     renderCalendar();
@@ -2442,12 +2778,15 @@ function renderAll(){
     try{renderStats();}catch(e){console.warn('구매 통계 렌더링 생략:',e);}
     try{renderSaleStats();}catch(e){console.warn('판매 통계 렌더링 생략:',e);}
     try{renderTotalStats();}catch(e){console.warn('전체 통계 렌더링 생략:',e);}
+    renderSyncSettings();
     updateScrollTopButton();
 }
 function initApp(){
     loadState();
+    const acquired=document.getElementById('new-acquired');
+    if(acquired&&!acquired.value)acquired.value=localTodayString();
     renderAll();
-	document.getElementById('calendar-nav-day').textContent = new Date().getDate();
+    document.getElementById('calendar-nav-day').textContent = new Date().getDate();
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initApp);else initApp();
 </script>
