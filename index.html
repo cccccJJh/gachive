@@ -11,6 +11,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Jua&family=Pretendard+Std:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/exceljs/dist/exceljs.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="env.js"></script>
 <style>
 :root{
     --navy:#1B2545;
@@ -152,6 +154,16 @@ button.secondary{background:#8A84A8;}
 .backup-row>*{flex:1;}
 .file-button{display:flex;align-items:center;justify-content:center;background:#8A84A8;color:white;padding:12px;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;text-align:center;}
 .file-button input{display:none;}
+.auth-overlay{position:fixed;inset:0;background:rgba(20,16,40,.45);z-index:2000;display:flex;align-items:center;justify-content:center;padding:20px;}
+.auth-overlay.hidden{display:none;}
+.hidden{display:none!important;}
+.auth-card{width:100%;max-width:360px;background:var(--paper);border-radius:18px;padding:20px;border:1px solid var(--line);box-shadow:var(--shadow);}
+.auth-card h3{margin:0 0 8px;}
+.auth-error{color:var(--coin-red);font-size:12px;min-height:16px;margin:6px 0 10px;}
+.sync-status{font-size:11px;color:#C8C3DC;min-height:14px;margin-top:4px;}
+#sync-toast{position:fixed;left:50%;bottom:96px;transform:translateX(-50%) translateY(12px);background:var(--navy);color:#fff;padding:10px 14px;border-radius:12px;font-size:12px;opacity:0;pointer-events:none;z-index:2100;max-width:86%;transition:.2s;}
+#sync-toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+#sync-toast.error{background:var(--coin-red);}
 @media(max-width:420px){
     .calendar-grid{gap:3px;}
     .calendar-day{min-height:72px;padding:4px 2px;border-radius:9px;}
@@ -433,6 +445,7 @@ button.secondary{background:#8A84A8;}
 <body>
 <header id="main-header">
     <div class="title">🧸 Gachive</div>
+    <div id="sync-status" class="sync-status"></div>
     <div class="coin-slot"></div>
 </header>
 
@@ -758,6 +771,18 @@ button.secondary{background:#8A84A8;}
                 </label>
             </div>
         </div>
+
+        <div class="card">
+            <h4 style="margin:0 0 6px 0;">기기 동기화</h4>
+            <p class="muted" style="margin:0 0 10px;line-height:1.5;">같은 인증 코드를 입력한 기기끼리 데이터가 동기화됩니다. 코드 없이도 이 기기에서만 사용할 수 있습니다.</p>
+            <p id="sync-settings-status" class="muted" style="margin:0 0 10px;">로컬 전용</p>
+            <label class="muted" for="sync-username-input">사용자 이름</label>
+            <input id="sync-username-input" type="text" placeholder="예: 핸드폰, 노트북" style="margin:2px 0 8px;">
+            <label class="muted" for="sync-code-input">인증 코드</label>
+            <input id="sync-code-input" type="text" placeholder="4글자 이상 영어 소문자" autocomplete="off" autocapitalize="off" spellcheck="false" style="margin:2px 0 8px;">
+            <button onclick="saveSyncSettings()" style="width:100%;">동기화 등록</button>
+            <button class="secondary" onclick="clearSyncSettings()" style="width:100%;margin-top:8px;">이 기기 동기화 해제</button>
+        </div>
     </div>
 </div>
 
@@ -770,6 +795,28 @@ button.secondary{background:#8A84A8;}
 
 
 <button id="scroll-top-btn" class="scroll-top-btn" onclick="scrollToPageTop()" aria-label="맨 위로 이동" title="맨 위로">↑</button>
+<div id="sync-toast"></div>
+
+<div id="auth-overlay" class="auth-overlay hidden">
+    <div class="auth-card">
+        <h3>🧸 기기 동기화</h3>
+        <div id="auth-choice">
+            <p class="muted" style="line-height:1.5;margin:0 0 14px;">지금 인증 코드를 등록하면 다른 기기와 데이터를 맞출 수 있습니다. 나중에 설정에서 등록해도 됩니다.</p>
+            <button onclick="showAuthForm()" style="width:100%;">지금 등록</button>
+            <button class="secondary" onclick="deferAuth()" style="width:100%;margin-top:8px;">나중에 등록</button>
+        </div>
+        <div id="auth-form" class="hidden">
+            <p class="muted" style="line-height:1.5;margin:0 0 12px;">같은 인증 코드를 입력한 기기끼리 데이터가 공유됩니다.</p>
+            <label class="muted" for="auth-code-input">인증 코드</label>
+            <input id="auth-code-input" type="text" placeholder="4글자 이상 영어 소문자" autocomplete="off" autocapitalize="off" spellcheck="false">
+            <label class="muted" for="auth-name-input">사용자 이름</label>
+            <input id="auth-name-input" type="text" placeholder="예: 핸드폰, 노트북">
+            <p id="auth-error" class="auth-error"></p>
+            <button onclick="submitAuth()" style="width:100%;">등록하고 시작</button>
+            <button class="secondary" onclick="deferAuth()" style="width:100%;margin-top:8px;">나중에 등록</button>
+        </div>
+    </div>
+</div>
 
 	<div class="bottom-nav">
 		<div class="nav-item active" onclick="switchTab('calendar', this)">
@@ -844,7 +891,11 @@ function normalizeItem(item){
         location:String(item.location||''),
         fav:Boolean(item.fav),
         sales,
-        note:String(item.note||'')
+        note:String(item.note||''),
+        created_by:String(item.created_by||''),
+        created_at:item.created_at||'',
+        updated_by:String(item.updated_by||''),
+        updated_at:item.updated_at||''
     };
 
     syncItemSaleState(normalized);
@@ -910,6 +961,377 @@ function loadState(){
     appSettings={showScrollTop:true};
 }
 
+const USER_KEY='gachive-username';
+const AUTH_CODE_KEY='gachive-auth-code';
+const AUTH_DEFERRED_KEY='gachive-auth-deferred';
+const SAVES_TABLE='gachive_saves';
+let currentUser='';
+let currentAuthCode='';
+let currentCodeHash='';
+let supabaseClient=null;
+let realtimeChannel=null;
+let syncReady=false;
+let saving=false;
+let fetchingRemote=false;
+let wasRealtimeDisconnected=false;
+let lifecycleBound=false;
+let vaultMeta={created_by:'',created_at:'',updated_by:'',updated_at:''};
+
+function getEnv(name){
+    const env=window.GACHIVE_ENV||{};
+    return String(env[name]||env['VITE_'+name]||env[name.replace(/^VITE_/,'')]||'').trim();
+}
+function envUrl(){return getEnv('VITE_SUPABASE_URL')||getEnv('SUPABASE_URL');}
+function envKey(){return getEnv('VITE_SUPABASE_PUBLISHABLE_KEY')||getEnv('SUPABASE_PUBLISHABLE_KEY')||getEnv('SUPABASE_ANON_KEY');}
+function hasEnv(){return Boolean(envUrl()&&envKey());}
+function isValidAuthCode(code){return /^[a-z]{4,}$/.test(String(code||''));}
+function isSyncEnabled(){return Boolean(supabaseClient&&syncReady&&currentCodeHash&&currentUser);}
+function nowIso(){return new Date().toISOString();}
+function isNewerTimestamp(a,b){return (Date.parse(a||0)||0)>(Date.parse(b||0)||0);}
+async function hashCode(text){
+    if(!globalThis.crypto?.subtle)throw Object.assign(new Error('이 브라우저에서는 인증 코드를 처리할 수 없습니다. HTTPS 또는 localhost에서 열어주세요.'),{code:'HASH'});
+    const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode('gachive:'+text));
+    return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+function stampCreate(obj){
+    const ts=nowIso();
+    obj.created_by=currentUser||obj.created_by||'';
+    obj.created_at=obj.created_at||ts;
+    obj.updated_by=currentUser||obj.updated_by||'';
+    obj.updated_at=ts;
+    return obj;
+}
+function stampUpdate(obj){
+    obj.updated_by=currentUser||obj.updated_by||'';
+    obj.updated_at=nowIso();
+    return obj;
+}
+function snapshotState(){
+    return {
+        mockItems:JSON.parse(JSON.stringify(mockItems)),
+        managedSeries:managedSeries.slice(),
+        appSettings:{...appSettings},
+        appTitle:getAppTitle(),
+        vaultMeta:{...vaultMeta}
+    };
+}
+function restoreState(snap){
+    mockItems=snap.mockItems;
+    managedSeries=snap.managedSeries;
+    appSettings=snap.appSettings;
+    vaultMeta=snap.vaultMeta||vaultMeta;
+    document.querySelector('header .title').innerHTML=`🧸 ${escapeHtml(snap.appTitle)}`;
+}
+function showSyncToast(text,isError){
+    const toast=document.getElementById('sync-toast');
+    if(!toast){if(isError)alert(text);return;}
+    toast.textContent=text;
+    toast.classList.add('show');
+    toast.classList.toggle('error',Boolean(isError));
+    clearTimeout(showSyncToast._timer);
+    showSyncToast._timer=setTimeout(()=>toast.classList.remove('show','error'),4200);
+}
+function updateSyncStatus(state,detail){
+    const el=document.getElementById('sync-status');
+    const settingsEl=document.getElementById('sync-settings-status');
+    const labels={
+        idle:currentAuthCode?`${currentAuthCode} · ${currentUser||'대기'}`:'로컬 전용',
+        connecting:'동기화 연결 중',
+        saving:'저장 중',
+        synced:currentAuthCode?`${currentAuthCode} · ${currentUser||'연결됨'}`:'연결됨',
+        reconnecting:'다시 연결 중…',
+        error:detail||'동기화 오류'
+    };
+    const text=labels[state]||detail||'';
+    if(el)el.textContent=text;
+    if(settingsEl){
+        settingsEl.textContent=currentAuthCode
+            ?`현재 인증 코드: ${currentAuthCode} / 사용자 이름: ${currentUser||'-'}`
+            :'인증 코드가 없습니다. 이 기기에서만 사용 중입니다.';
+    }
+    const codeInput=document.getElementById('sync-code-input');
+    const nameInput=document.getElementById('sync-username-input');
+    if(codeInput&&currentAuthCode&&!codeInput.value)codeInput.value=currentAuthCode;
+    if(nameInput&&currentUser)nameInput.value=currentUser;
+}
+function ensureClient(){
+    if(supabaseClient)return supabaseClient;
+    if(typeof supabase==='undefined')throw new Error('Supabase 클라이언트를 불러오지 못했습니다.');
+    if(!hasEnv())throw new Error('Supabase 연결 정보가 없습니다.');
+    supabaseClient=supabase.createClient(envUrl(),envKey(),{realtime:{params:{eventsPerSecond:10}}});
+    return supabaseClient;
+}
+function payloadFromState(){
+    return {
+        mockItems:mockItems.map(normalizeItem),
+        managedSeries:managedSeries.slice(),
+        appTitle:getAppTitle(),
+        appSettings:{...appSettings}
+    };
+}
+function applyRemotePayload(payload,row){
+    const data=payload&&typeof payload==='object'?payload:{};
+    if(Array.isArray(data.managedSeries)&&data.managedSeries.length)managedSeries=data.managedSeries.slice();
+    if(Array.isArray(data.mockItems))mockItems=data.mockItems.map(normalizeItem);
+    if(data.appTitle)document.querySelector('header .title').innerHTML=`🧸 ${escapeHtml(data.appTitle)}`;
+    if(data.appSettings&&typeof data.appSettings==='object'){
+        appSettings={showScrollTop:data.appSettings.showScrollTop!==false};
+    }
+    vaultMeta={
+        created_by:row?.created_by||vaultMeta.created_by||currentUser,
+        created_at:row?.created_at||vaultMeta.created_at||nowIso(),
+        updated_by:row?.updated_by||currentUser,
+        updated_at:row?.updated_at||nowIso()
+    };
+}
+async function fetchVaultRow(){
+    const {data,error}=await supabaseClient.from(SAVES_TABLE).select('*').eq('code_hash',currentCodeHash).order('updated_at',{ascending:false}).limit(1);
+    if(error)throw error;
+    return Array.isArray(data)&&data.length?data[0]:null;
+}
+async function upsertRemote(){
+    const row={
+        code_hash:currentCodeHash,
+        sync_code:currentAuthCode,
+        payload:payloadFromState(),
+        created_by:vaultMeta.created_by||currentUser,
+        created_at:vaultMeta.created_at||nowIso(),
+        updated_by:currentUser,
+        updated_at:nowIso()
+    };
+    const existing=await fetchVaultRow();
+    if(existing?.updated_at&&vaultMeta.updated_at&&isNewerTimestamp(existing.updated_at,vaultMeta.updated_at)){
+        applyRemotePayload(existing.payload,existing);
+        saveState();
+        renderAll();
+        throw Object.assign(new Error('다른 기기의 최신 데이터를 불러왔습니다.'),{code:'CONFLICT'});
+    }
+    if(existing){
+        const {error}=await supabaseClient.from(SAVES_TABLE).update({
+            code_hash:row.code_hash,
+            sync_code:row.sync_code,
+            payload:row.payload,
+            updated_by:row.updated_by,
+            updated_at:row.updated_at
+        }).eq('code_hash',currentCodeHash);
+        if(error)throw error;
+    }else{
+        const {error}=await supabaseClient.from(SAVES_TABLE).insert(row);
+        if(error)throw error;
+    }
+    vaultMeta.updated_by=row.updated_by;
+    vaultMeta.updated_at=row.updated_at;
+    if(!vaultMeta.created_at){
+        vaultMeta.created_by=row.created_by;
+        vaultMeta.created_at=row.created_at;
+    }
+}
+async function persistAfter(mutator,afterSuccess){
+    if(saving){
+        alert('저장 중입니다. 잠시만 기다려주세요.');
+        return false;
+    }
+    const prev=snapshotState();
+    saving=true;
+    updateSyncStatus('saving');
+    try{
+        mutator();
+        saveState();
+        if(typeof afterSuccess==='function')afterSuccess();
+        else renderAll();
+        if(isSyncEnabled())await upsertRemote();
+        updateSyncStatus(syncReady?'synced':'idle');
+        return true;
+    }catch(err){
+        if(err?.code!=='CONFLICT'){
+            restoreState(prev);
+            saveState();
+            renderAll();
+        }
+        const text=err?.message||'저장에 실패했습니다.';
+        showSyncToast(text,true);
+        updateSyncStatus(err?.code==='CONFLICT'?'synced':'error',text);
+        return false;
+    }finally{
+        saving=false;
+    }
+}
+async function fetchRemoteAll(){
+    if(!isSyncEnabled()||fetchingRemote)return false;
+    fetchingRemote=true;
+    updateSyncStatus(wasRealtimeDisconnected?'reconnecting':'connecting');
+    try{
+        const row=await fetchVaultRow();
+        if(row?.payload){
+            if(!vaultMeta.updated_at||isNewerTimestamp(row.updated_at,vaultMeta.updated_at)){
+                applyRemotePayload(row.payload,row);
+                saveState();
+                renderAll();
+            }
+        }else{
+            await upsertRemote();
+        }
+        updateSyncStatus('synced');
+        return true;
+    }catch(err){
+        showSyncToast(err?.message||'데이터를 불러오지 못했습니다.',true);
+        updateSyncStatus('error',err?.message);
+        return false;
+    }finally{
+        fetchingRemote=false;
+    }
+}
+function handleRemoteChange(payload){
+    const row=payload.new||payload.old||{};
+    const hash=String(row.code_hash||'').trim();
+    if(hash&&hash!==currentCodeHash)return;
+    if(payload.eventType==='DELETE'||!payload.new)return;
+    if(vaultMeta.updated_at&&!isNewerTimestamp(row.updated_at,vaultMeta.updated_at))return;
+    applyRemotePayload(row.payload,row);
+    saveState();
+    renderAll();
+}
+function unsubscribeRealtime(){
+    if(realtimeChannel&&supabaseClient)supabaseClient.removeChannel(realtimeChannel);
+    realtimeChannel=null;
+}
+function subscribeRealtime(){
+    if(!supabaseClient||!currentCodeHash)return;
+    unsubscribeRealtime();
+    const filter=`code_hash=eq.${currentCodeHash}`;
+    const change=(event)=>({event,schema:'public',table:SAVES_TABLE,filter});
+    realtimeChannel=supabaseClient.channel(`gachive-sync-${currentCodeHash}`)
+        .on('postgres_changes',change('INSERT'),handleRemoteChange)
+        .on('postgres_changes',change('UPDATE'),handleRemoteChange)
+        .on('postgres_changes',change('DELETE'),handleRemoteChange)
+        .subscribe(status=>{
+            if(status==='SUBSCRIBED'){
+                updateSyncStatus('synced');
+                if(wasRealtimeDisconnected)fetchRemoteAll();
+                wasRealtimeDisconnected=false;
+            }else if(status==='CHANNEL_ERROR'||status==='TIMED_OUT'||status==='CLOSED'){
+                wasRealtimeDisconnected=true;
+                updateSyncStatus('reconnecting');
+            }
+        });
+}
+function bindSyncLifecycle(){
+    if(lifecycleBound)return;
+    lifecycleBound=true;
+    document.addEventListener('visibilitychange',()=>{
+        if(!syncReady)return;
+        if(document.visibilityState==='hidden')unsubscribeRealtime();
+        else{
+            fetchRemoteAll();
+            subscribeRealtime();
+        }
+    });
+    window.addEventListener('focus',()=>{if(syncReady)fetchRemoteAll();});
+    window.addEventListener('online',()=>{
+        if(!syncReady)return;
+        fetchRemoteAll();
+        subscribeRealtime();
+    });
+    window.addEventListener('pagehide',unsubscribeRealtime);
+    window.addEventListener('beforeunload',unsubscribeRealtime);
+    window.addEventListener('pageshow',()=>{
+        if(!syncReady)return;
+        fetchRemoteAll();
+        subscribeRealtime();
+    });
+}
+async function startSync(){
+    if(!currentAuthCode||!currentUser||!hasEnv()){
+        syncReady=false;
+        updateSyncStatus('idle');
+        return false;
+    }
+    try{
+        ensureClient();
+        currentCodeHash=await hashCode(currentAuthCode);
+        bindSyncLifecycle();
+        syncReady=true;
+        const ok=await fetchRemoteAll();
+        if(ok)subscribeRealtime();
+        return ok;
+    }catch(err){
+        syncReady=false;
+        showSyncToast(err?.message||'동기화 연결에 실패했습니다.',true);
+        updateSyncStatus('error',err?.message);
+        return false;
+    }
+}
+function hideAuthOverlay(){document.getElementById('auth-overlay')?.classList.add('hidden');}
+function showAuthChoice(){
+    document.getElementById('auth-overlay')?.classList.remove('hidden');
+    document.getElementById('auth-choice')?.classList.remove('hidden');
+    document.getElementById('auth-form')?.classList.add('hidden');
+}
+function showAuthForm(){
+    document.getElementById('auth-overlay')?.classList.remove('hidden');
+    document.getElementById('auth-choice')?.classList.add('hidden');
+    document.getElementById('auth-form')?.classList.remove('hidden');
+    const nameInput=document.getElementById('auth-name-input');
+    if(nameInput&&currentUser)nameInput.value=currentUser;
+}
+function deferAuth(){
+    localStorage.setItem(AUTH_DEFERRED_KEY,'1');
+    hideAuthOverlay();
+    updateSyncStatus('idle');
+}
+async function submitAuth(){
+    const errorEl=document.getElementById('auth-error');
+    const code=(document.getElementById('auth-code-input')?.value||'').trim();
+    const name=(document.getElementById('auth-name-input')?.value||'').trim();
+    if(errorEl)errorEl.textContent='';
+    if(!isValidAuthCode(code)){
+        if(errorEl)errorEl.textContent='인증 코드는 4글자 이상 영어 소문자만 입력하세요.';
+        return;
+    }
+    if(!name){
+        if(errorEl)errorEl.textContent='사용자 이름을 입력해주세요.';
+        return;
+    }
+    currentAuthCode=code;
+    currentUser=name;
+    localStorage.setItem(AUTH_CODE_KEY,code);
+    localStorage.setItem(USER_KEY,name);
+    localStorage.setItem(AUTH_DEFERRED_KEY,'1');
+    const ok=await startSync();
+    if(ok)hideAuthOverlay();
+    else if(errorEl)errorEl.textContent='동기화 연결에 실패했습니다. 나중에 설정에서 다시 등록할 수 있습니다.';
+}
+async function saveSyncSettings(){
+    const code=(document.getElementById('sync-code-input')?.value||'').trim();
+    const name=(document.getElementById('sync-username-input')?.value||'').trim();
+    if(!isValidAuthCode(code)){
+        alert('인증 코드는 4글자 이상 영어 소문자만 입력하세요.');
+        return;
+    }
+    if(!name){
+        alert('사용자 이름을 입력해주세요.');
+        return;
+    }
+    currentAuthCode=code;
+    currentUser=name;
+    localStorage.setItem(AUTH_CODE_KEY,code);
+    localStorage.setItem(USER_KEY,name);
+    localStorage.setItem(AUTH_DEFERRED_KEY,'1');
+    const ok=await startSync();
+    alert(ok?'동기화가 등록되었습니다.':'동기화 연결에 실패했습니다. 이 기기 데이터는 그대로 둡니다.');
+}
+function clearSyncSettings(){
+    unsubscribeRealtime();
+    syncReady=false;
+    currentAuthCode='';
+    currentCodeHash='';
+    localStorage.removeItem(AUTH_CODE_KEY);
+    const codeInput=document.getElementById('sync-code-input');
+    if(codeInput)codeInput.value='';
+    updateSyncStatus('idle');
+    alert('이 기기 동기화를 해제했습니다. 로컬 데이터는 그대로 둡니다.');
+}
+
 function getTransactions(){
     const tx=[];
     mockItems.forEach(item=>{
@@ -953,7 +1375,12 @@ function switchTab(tabId,el){
     document.getElementById('tab-'+tabId).classList.add('active');
     el.classList.add('active');
     closeSheet(true);
+    if(tabId==='calendar')goToToday();
     if(tabId==='stats')setTimeout(renderTotalStats,0);
+}
+function goToToday(){
+    currentDate=new Date();
+    renderCalendar();
 }
 function switchStatsTab(tab,el){
     const container=document.getElementById('tab-stats');
@@ -1536,7 +1963,7 @@ function openSaleForm(id, opts={}){
     });
 }
 
-function saveCollectionItem(id){
+async function saveCollectionItem(id){
     const p=mockItems.find(x=>x.id===id);if(!p)return;
 
     const newQuantity=Math.max(1,Math.floor(Number(document.getElementById('edit-quantity').value||1)));
@@ -1546,20 +1973,23 @@ function saveCollectionItem(id){
         return;
     }
 
-    p.name=document.getElementById('edit-name').value.trim()||p.name;
-    p.series=document.getElementById('edit-series').value;
-    p.quantity=newQuantity;
-    p.acquired=document.getElementById('edit-acquired').value;
-    p.purchasePrice=Number(document.getElementById('edit-purchase-price').value||0);
-    p.location=document.getElementById('edit-location').value.trim();
-    p.note=document.getElementById('edit-note').value.trim();
-    p.fav=document.getElementById('edit-fav').checked;
-    syncItemSaleState(p);
-
-    saveState();
-    renderAll();
-    if(sheetStack.length)sheetStack.pop();
-    openItemDetail(id, {replace:true});
+    const ok=await persistAfter(()=>{
+        p.name=document.getElementById('edit-name').value.trim()||p.name;
+        p.series=document.getElementById('edit-series').value;
+        p.quantity=newQuantity;
+        p.acquired=document.getElementById('edit-acquired').value;
+        p.purchasePrice=Number(document.getElementById('edit-purchase-price').value||0);
+        p.location=document.getElementById('edit-location').value.trim();
+        p.note=document.getElementById('edit-note').value.trim();
+        p.fav=document.getElementById('edit-fav').checked;
+        stampUpdate(p);
+        syncItemSaleState(p);
+    },()=>{
+        renderAll();
+        if(sheetStack.length)sheetStack.pop();
+        openItemDetail(id, {replace:true});
+    });
+    return ok;
 }
 
 function applyEditorFieldsBeforeSale(p){
@@ -1600,7 +2030,7 @@ function toggleSaleForm(){
     }
 }
 
-function registerSale(id){
+async function registerSale(id){
     const p=mockItems.find(x=>x.id===id);if(!p)return;
 
     const date=document.getElementById('sale-date')?.value||'';
@@ -1615,50 +2045,57 @@ function registerSale(id){
     if(amount<0){alert('판매금액은 0원 이상으로 입력해주세요.');return;}
 
     if(!Array.isArray(p.sales))p.sales=[];
-    p.sales.push({
+    const sale={
         id:Date.now()+Math.floor(Math.random()*1000),
         date,
         quantity:qty,
         amount,
         note
+    };
+    const ok=await persistAfter(()=>{
+        p.sales.push(sale);
+        stampUpdate(p);
+        syncItemSaleState(p);
+    },()=>{
+        renderAll();
+        if(sheetStack.length)sheetStack.pop();
+        openItemDetail(id, {replace:true});
     });
-    syncItemSaleState(p);
-
-    saveState();
-    renderAll();
-    if(sheetStack.length)sheetStack.pop();
-    openItemDetail(id, {replace:true});
+    return ok;
 }
 
-function deleteSale(itemId,saleId){
+async function deleteSale(itemId,saleId){
     const p=mockItems.find(x=>x.id===itemId);if(!p)return;
     if(!confirm('이 판매 이력을 삭제할까요? 보유 수량이 다시 복구됩니다.'))return;
-
-    p.sales=(Array.isArray(p.sales)?p.sales:[]).filter(sale=>Number(sale.id)!==Number(saleId));
-    syncItemSaleState(p);
-    saveState();
-    renderAll();
-    openSaleForm(itemId, {replace:true});
+    await persistAfter(()=>{
+        p.sales=(Array.isArray(p.sales)?p.sales:[]).filter(sale=>Number(sale.id)!==Number(saleId));
+        stampUpdate(p);
+        syncItemSaleState(p);
+    },()=>{
+        renderAll();
+        openSaleForm(itemId, {replace:true});
+    });
 }
 
-function deleteCollectionItem(id){
+async function deleteCollectionItem(id){
     if(!confirm('이 아이템을 삭제할까요?'))return;
     const item=mockItems.find(x=>x.id===id);
     const series=item?.series;
     const returnToHoldings=currentSheetKind==='holdings'||sheetStack.some(s=>s.kind==='holdings');
-    mockItems=mockItems.filter(x=>x.id!==id);
-    saveState();
-    closeSheet(true);
-    renderAll();
-    if(returnToHoldings && series)openHoldingsSheet(series);
+    await persistAfter(()=>{
+        mockItems=mockItems.filter(x=>x.id!==id);
+    },()=>{
+        closeSheet(true);
+        renderAll();
+        if(returnToHoldings && series)openHoldingsSheet(series);
+    });
 }
-function addCollectionItem(){
+async function addCollectionItem(){
     const name=document.getElementById('new-name').value.trim();
     if(!name){alert('아이템 이름을 입력해주세요.');return;}
 
     const quantity=Math.max(1,Math.floor(Number(document.getElementById('new-quantity')?.value||1)));
-
-    mockItems.unshift(normalizeItem({
+    const item=stampCreate(normalizeItem({
         id:Date.now(),
         name,
         series:document.getElementById('new-series').value,
@@ -1671,10 +2108,16 @@ function addCollectionItem(){
         sales:[]
     }));
 
-    ['new-name','new-purchase-price','new-location','new-note'].forEach(id=>document.getElementById(id).value='');
-    document.getElementById('new-quantity').value='1';
-    document.getElementById('new-fav').checked=false;
-    saveState();renderAll();toggleNewItemForm();
+    const saved=await persistAfter(()=>{
+        mockItems.unshift(item);
+    },()=>{
+        ['new-name','new-purchase-price','new-location','new-note'].forEach(id=>document.getElementById(id).value='');
+        document.getElementById('new-quantity').value='1';
+        document.getElementById('new-fav').checked=false;
+        renderAll();
+        toggleNewItemForm();
+    });
+    return saved;
 }
 
 
@@ -1983,20 +2426,22 @@ function renderSeriesManager(){
     }).join('');
 }
 
-function addSeries(){
+async function addSeries(){
     const input=document.getElementById('series-name-input');
     const name=(input?.value||'').trim();
     if(!name){alert('시리즈명을 입력해주세요.');return;}
     if(managedSeries.includes(name)){alert('이미 등록된 시리즈입니다.');return;}
 
-    managedSeries.push(name);
-    input.value='';
-    saveState();
-    renderSeriesControls();
-    renderSeriesManager();
+    await persistAfter(()=>{
+        managedSeries.push(name);
+        input.value='';
+    },()=>{
+        renderSeriesControls();
+        renderSeriesManager();
+    });
 }
 
-function editSeries(index){
+async function editSeries(index){
     const oldName=managedSeries[index];
     if(!oldName)return;
 
@@ -2008,19 +2453,19 @@ function editSeries(index){
         return;
     }
 
-    managedSeries[index]=newName;
-
-    // 해당 시리즈를 쓰고 있던 컬렉션도 함께 변경
-    mockItems.forEach(item=>{
-        if(item.series===oldName)item.series=newName;
+    const saved=await persistAfter(()=>{
+        managedSeries[index]=newName;
+        mockItems.forEach(item=>{
+            if(item.series===oldName){
+                item.series=newName;
+                stampUpdate(item);
+            }
+        });
     });
-
-    saveState();
-    renderAll();
-    alert(`'${oldName}' → '${newName}'으로 수정했습니다.`);
+    if(saved)alert(`'${oldName}' → '${newName}'으로 수정했습니다.`);
 }
 
-function deleteSeries(index){
+async function deleteSeries(index){
     const name=managedSeries[index];
     if(!name)return;
 
@@ -2031,15 +2476,17 @@ function deleteSeries(index){
 
     if(!confirm(`'${name}' 시리즈를 삭제할까요?`))return;
 
-    managedSeries.splice(index,1);
-    saveState();
-    renderSeriesControls();
-    renderSeriesManager();
+    await persistAfter(()=>{
+        managedSeries.splice(index,1);
+    },()=>{
+        renderSeriesControls();
+        renderSeriesManager();
+    });
 }
-function setScrollTopEnabled(enabled){
-    appSettings.showScrollTop=Boolean(enabled);
-    saveState();
-    updateScrollTopButton();
+async function setScrollTopEnabled(enabled){
+    await persistAfter(()=>{
+        appSettings.showScrollTop=Boolean(enabled);
+    },updateScrollTopButton);
 }
 
 function updateScrollTopButton(){
@@ -2057,7 +2504,14 @@ function scrollToPageTop(){
 
 window.addEventListener('scroll',updateScrollTopButton,{passive:true});
 
-function changeAppTitle(){const title=document.getElementById('app-title-input').value.trim();if(title){document.querySelector('header .title').innerHTML=`🧸 ${escapeHtml(title)}`;saveState();alert('앱 이름이 저장되었습니다.');}}
+async function changeAppTitle(){
+    const title=document.getElementById('app-title-input').value.trim();
+    if(!title)return;
+    const saved=await persistAfter(()=>{
+        document.querySelector('header .title').innerHTML=`🧸 ${escapeHtml(title)}`;
+    });
+    if(saved)alert('앱 이름이 저장되었습니다.');
+}
 
 async function exportExcel(){
     if(typeof ExcelJS==='undefined'){
@@ -2250,7 +2704,7 @@ function importExcel(event){
     }
 
     const reader=new FileReader();
-    reader.onload=e=>{
+    reader.onload=async e=>{
         try{
             const wb=XLSX.read(e.target.result,{type:'array'});
             const collectionSheet=wb.Sheets['컬렉션']||wb.Sheets[wb.SheetNames[0]];
@@ -2353,6 +2807,7 @@ function importExcel(event){
             }
 
             saveState();renderAll();
+            if(isSyncEnabled())await upsertRemote();
             alert(`${mockItems.length}개의 컬렉션 데이터를 불러왔습니다.`);
         }catch(err){
             console.error(err);
@@ -2368,11 +2823,11 @@ function exportData(){
 }
 function importData(event){
     const file=event.target.files?.[0];if(!file)return;const reader=new FileReader();
-    reader.onload=e=>{try{const data=JSON.parse(e.target.result);if(Array.isArray(data.managedSeries)&&data.managedSeries.length)managedSeries=data.managedSeries;if(Array.isArray(data.mockItems))mockItems=data.mockItems.map(normalizeItem);if(data.appTitle)document.querySelector('header .title').innerHTML=`🧸 ${escapeHtml(data.appTitle)}`;if(data.appSettings&&typeof data.appSettings==='object')appSettings={showScrollTop:data.appSettings.showScrollTop!==false};saveState();renderAll();updateScrollTopButton();alert('데이터를 불러왔습니다.');}catch(err){alert('JSON 파일을 읽는 중 오류가 발생했습니다.');}event.target.value='';};
+    reader.onload=async e=>{try{const data=JSON.parse(e.target.result);if(Array.isArray(data.managedSeries)&&data.managedSeries.length)managedSeries=data.managedSeries;if(Array.isArray(data.mockItems))mockItems=data.mockItems.map(normalizeItem);if(data.appTitle)document.querySelector('header .title').innerHTML=`🧸 ${escapeHtml(data.appTitle)}`;if(data.appSettings&&typeof data.appSettings==='object')appSettings={showScrollTop:data.appSettings.showScrollTop!==false};saveState();renderAll();updateScrollTopButton();if(isSyncEnabled())await upsertRemote();alert('데이터를 불러왔습니다.');}catch(err){alert('JSON 파일을 읽는 중 오류가 발생했습니다.');}event.target.value='';};
     reader.readAsText(file);
 }
 
-function importJsonText(){
+async function importJsonText(){
     const input=document.getElementById('json-text-input');
     const raw=(input?.value||'').trim();
 
@@ -2412,6 +2867,7 @@ function importJsonText(){
 
         saveState();
         renderAll();
+        if(isSyncEnabled())await upsertRemote();
 
         input.value='';
         alert(`${mockItems.length}개의 컬렉션 데이터를 불러왔습니다.`);
@@ -2421,7 +2877,19 @@ function importJsonText(){
     }
 }
 
-function resetAllData(){if(!confirm('기본 예시 데이터로 초기화할까요?'))return;managedSeries=SEED_SERIES.slice();mockItems=cloneSeedItems().map(normalizeItem);appSettings={showScrollTop:true};document.querySelector('header .title').innerHTML=`🧸 ${DEFAULT_TITLE}`;saveState();renderAll();updateScrollTopButton();alert('기본 데이터로 초기화되었습니다.');}
+async function resetAllData(){
+    if(!confirm('기본 예시 데이터로 초기화할까요?'))return;
+    const saved=await persistAfter(()=>{
+        managedSeries=SEED_SERIES.slice();
+        mockItems=cloneSeedItems().map(normalizeItem);
+        appSettings={showScrollTop:true};
+        document.querySelector('header .title').innerHTML=`🧸 ${DEFAULT_TITLE}`;
+    },()=>{
+        renderAll();
+        updateScrollTopButton();
+    });
+    if(saved)alert('기본 데이터로 초기화되었습니다.');
+}
 
 function renderAll(){
     renderSeriesControls();
@@ -2446,8 +2914,28 @@ function renderAll(){
 }
 function initApp(){
     loadState();
+    currentUser=localStorage.getItem(USER_KEY)||'';
+    currentAuthCode=localStorage.getItem(AUTH_CODE_KEY)||'';
+    const nameInput=document.getElementById('sync-username-input');
+    const codeInput=document.getElementById('sync-code-input');
+    if(nameInput&&currentUser)nameInput.value=currentUser;
+    if(codeInput&&currentAuthCode)codeInput.value=currentAuthCode;
+    goToToday();
+    const acquired=document.getElementById('new-acquired');
+    if(acquired)acquired.value=localTodayString();
     renderAll();
-	document.getElementById('calendar-nav-day').textContent = new Date().getDate();
+    document.getElementById('calendar-nav-day').textContent=new Date().getDate();
+    updateSyncStatus('idle');
+
+    const deferred=localStorage.getItem(AUTH_DEFERRED_KEY)==='1';
+    if(currentAuthCode&&currentUser&&hasEnv()){
+        hideAuthOverlay();
+        Promise.resolve(startSync());
+    }else if(!deferred){
+        showAuthChoice();
+    }else{
+        hideAuthOverlay();
+    }
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initApp);else initApp();
 </script>
