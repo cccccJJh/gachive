@@ -9,15 +9,14 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Jua&family=Pretendard+Std:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/exceljs/dist/exceljs.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="env.js"></script>
 <style>
 :root{
     --navy:#1B2545;
     --navy-soft:#3A4370;
+    --remain-bar:#C4B5DC;
+    --sold-bar:#A3C4B0;
     --ink:#241C3D;
     --ink-soft2:#6A6389;
     --bg:#F5F1FB;
@@ -51,8 +50,7 @@ header{
     z-index:100;
     box-shadow:0 2px 14px rgba(27,37,69,0.25);
 }
-header .title{font-family:'Jua',sans-serif;font-size:20px;letter-spacing:.02em;display:flex;align-items:center;gap:6px;flex:none;}
-.header-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:24px;}
+header .title{font-family:'Jua',sans-serif;font-size:20px;letter-spacing:.02em;display:flex;align-items:center;justify-content:center;gap:6px;}
 .coin-slot{width:64px;height:8px;margin:8px auto 0;background:var(--navy-soft);border-radius:6px;position:relative;}
 .coin-slot::after{content:"";position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:34px;height:4px;background:#151b33;border-radius:3px;}
 .tab-content{display:none;padding:15px;animation:fadeIn .25s;}
@@ -127,6 +125,15 @@ button.secondary{background:#8A84A8;}
 .badge.sold{background:#9089AC;}
 .stat-pill{display:flex;align-items:center;gap:8px;background:#FAF8FE;border:1px solid var(--line);border-radius:12px;padding:10px 12px;}
 .stat-pill .num{font-family:'Space Mono',monospace;font-weight:700;font-size:16px;margin-left:auto;}
+.stat-pill.net-hero{padding:14px 14px;background:#F4F0FA;}
+.stat-pill.net-hero .num{font-size:20px;}
+.series-net-row{padding:12px 0;border-bottom:1px dashed var(--line);}
+.series-net-row:last-child{border-bottom:none;}
+.series-net-row .series-stack{margin-top:8px;}
+.series-stack{display:flex;height:8px;border-radius:999px;overflow:hidden;background:#EEEAF8;}
+.series-stack-fill{height:100%;min-width:0;}
+.series-stack-fill.exp{background:var(--remain-bar);}
+.series-stack-fill.inc{background:var(--sold-bar);}
 .fav-star{color:var(--ssr);font-size:14px;margin-left:4px;}
 .collection-card{cursor:pointer;transition:transform .15s,box-shadow .15s;}
 .collection-card:active{transform:scale(.99);}
@@ -259,6 +266,14 @@ button.secondary{background:#8A84A8;}
 
     .stat-pill .num{
         font-size:14px;
+    }
+
+    .stat-pill.net-hero{
+        padding:12px 11px;
+    }
+
+    .stat-pill.net-hero .num{
+        font-size:17px;
     }
 
     .item-row{
@@ -413,100 +428,11 @@ button.secondary{background:#8A84A8;}
     transform:translateX(20px);
 }
 
-.sync-status{
-    margin:0;
-    font-size:10px;
-    color:#C8C3DC;
-    min-width:0;
-    max-width:52%;
-    text-align:right;
-    white-space:nowrap;
-    overflow:hidden;
-    text-overflow:ellipsis;
-    line-height:1.2;
-}
-.sync-status[data-state="error"]{color:#FF8A97;}
-.sync-status[data-state="reconnecting"],
-.sync-status[data-state="connecting"]{color:#FFD27A;}
-.sync-status[data-state="synced"]{color:#8EE7D3;}
-
-.auth-overlay{
-    position:fixed;
-    inset:0;
-    z-index:3000;
-    background:radial-gradient(circle at 1px 1px,rgba(255,255,255,0.06) 1px,transparent 0) 0 0/18px 18px,#1B2545;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    padding:24px 16px;
-}
-.auth-overlay.hidden{display:none;}
-.auth-card{
-    width:min(420px,100%);
-    background:var(--paper);
-    border-radius:22px;
-    padding:24px 20px 20px;
-    box-shadow:0 12px 36px rgba(10,12,28,.35);
-    border:1px solid var(--line);
-}
-.auth-card h3{margin:0 0 6px;text-align:center;}
-.auth-card .lead{margin:0 0 16px;text-align:center;line-height:1.55;}
-.auth-error{color:var(--coin-red);font-size:12px;min-height:18px;margin:4px 0 10px;}
-.sync-toast{
-    position:fixed;
-    left:50%;
-    bottom:100px;
-    transform:translateX(-50%) translateY(10px);
-    max-width:min(420px,90vw);
-    background:#1B2545;
-    color:#fff;
-    padding:12px 14px;
-    border-radius:12px;
-    z-index:2500;
-    opacity:0;
-    pointer-events:none;
-    transition:opacity .2s ease,transform .2s ease;
-    font-size:13px;
-    line-height:1.45;
-    box-shadow:0 8px 24px rgba(27,37,69,.28);
-}
-.sync-toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
-.legacy-actions{display:flex;gap:8px;margin-top:12px;}
-.legacy-actions button{flex:1;}
-.legacy-result{margin-top:10px;font-size:12px;line-height:1.5;}
-#auth-form.hidden,#legacy-prompt.hidden,#legacy-settings-card.hidden{display:none;}
-
 </style>
 </head>
 <body>
-<div id="auth-overlay" class="auth-overlay">
-    <div class="auth-card">
-        <h3>🧸 Gachive</h3>
-        <div id="legacy-prompt" class="hidden">
-            <p class="muted lead">이전 버전의 데이터가 발견되었습니다. 새 보관함으로 가져오시겠습니까?</p>
-            <div class="legacy-actions">
-                <button type="button" onclick="chooseLegacyMigrate(true)">예</button>
-                <button type="button" class="secondary" onclick="chooseLegacyMigrate(false)">아니오</button>
-            </div>
-        </div>
-        <div id="auth-form">
-            <p id="auth-lead" class="muted lead">같은 보관함 코드를 입력한 기기끼리 데이터를 공유할 수 있습니다.<br>사용자 이름에는 핸드폰, 노트북처럼 알아보기 쉬운 이름을 입력하세요.</p>
-            <label class="muted" for="auth-code-input">보관함 코드</label>
-            <input id="auth-code-input" type="text" placeholder="4글자 이상 영어 소문자 알파벳을 입력하세요" autocomplete="off" autocapitalize="off" spellcheck="false">
-            <label class="muted" for="auth-name-input">사용자 이름</label>
-            <input id="auth-name-input" type="text" placeholder="예: 핸드폰, 노트북" autocomplete="nickname">
-            <p id="auth-error" class="auth-error"></p>
-            <p id="legacy-result" class="legacy-result muted"></p>
-            <button id="auth-submit-btn" type="button" onclick="submitAuth()" style="width:100%;">접속하기</button>
-        </div>
-    </div>
-</div>
-
 <header id="main-header">
-    <div class="header-bar">
-        <div class="title">🧸 Gachive</div>
-        <div id="sync-status" class="sync-status"></div>
-    </div>
+    <div class="title">🧸 Gachive</div>
     <div class="coin-slot"></div>
 </header>
 
@@ -535,6 +461,37 @@ button.secondary{background:#8A84A8;}
 <!-- 2. 뽑기기록 -->
 <div id="tab-ledger" class="tab-content">
     <div class="card">
+        <div class="flex-between accordion-header" id="new-item-accordion-header" onclick="toggleNewItemForm()">
+            <h4 style="margin:0;">뽑기 등록 🎫</h4><span class="chevron">▾</span>
+        </div>
+        <div class="accordion-body" id="new-item-accordion-body">
+            <div class="accordion-body-inner">
+                <div style="margin-bottom:8px;">
+                    <label class="muted">아이템 이름</label>
+                    <input id="new-name" type="text" placeholder="예: 고양이 미니어처" style="margin:2px 0 0;">
+                </div>
+                <div style="display:flex;gap:8px;margin-bottom:8px;">
+                    <div style="flex:1.4;"><label class="muted">시리즈</label><select id="new-series" style="margin:2px 0 0;"></select></div>
+                    <div style="flex:.6;"><label class="muted">등록 수량</label><input id="new-quantity" type="number" min="1" step="1" value="1" style="margin:2px 0 0;"></div>
+                </div>
+                <div style="display:flex;gap:8px;margin-bottom:8px;">
+                    <div style="flex:1;"><label class="muted">구입금액 (총액)</label><input id="new-purchase-price" type="number" min="0" placeholder="예: 20000" style="margin:2px 0 0;"></div>
+                    <div style="flex:1;"><label class="muted">획득일</label><input id="new-acquired" type="date" value="2026-08-12" style="margin:2px 0 0;"></div>
+                </div>
+                <div style="margin-bottom:8px;">
+                    <label class="muted">구입 위치</label><input id="new-location" type="text" placeholder="예: 홍대 가챠샵" style="margin:2px 0 0;">
+                </div>
+                <div style="margin-bottom:14px;">
+                    <label class="muted">메모 / 상세설명</label>
+                    <textarea id="new-note" rows="3" placeholder="예: 홍대에서 뽑음 / 도색 살짝 벗겨짐 / 컨디션 좋음 / 중복이라 교환 예정" style="margin:2px 0 0;resize:vertical;"></textarea>
+                </div>
+                <div style="margin-bottom:14px;"><label style="font-size:13px;display:flex;align-items:center;gap:5px;cursor:pointer;"><input id="new-fav" type="checkbox" style="width:auto;margin:0;transform:scale(1.1);"> ⭐ 최애 등록</label></div>
+                <button onclick="addCollectionItem()" style="width:100%;">뽑기 등록</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
         <div class="flex-between" style="margin-bottom:10px;gap:8px;flex-wrap:wrap;">
             <h4 id="ledger-summary-title" style="margin:0;">2026년 8월 요약</h4>
             <div style="display:flex;gap:6px;align-items:center;">
@@ -551,7 +508,6 @@ button.secondary{background:#8A84A8;}
             <div class="summary-box"><span class="label">지출</span><span id="ledger-expense" class="value" style="color:var(--coin-red);">0원</span></div>
             <div class="summary-box"><span class="label">순지출</span><span id="ledger-net" class="value">0원</span></div>
         </div>
-        <p class="muted" style="margin:10px 0 0;text-align:center;">컬렉션의 구입·판매 정보를 기준으로 자동 집계되는 조회 전용 화면입니다.</p>
     </div>
 <div class="card">
         <div class="flex-between" style="margin-bottom:8px;gap:8px;">
@@ -579,37 +535,6 @@ button.secondary{background:#8A84A8;}
 
 <!-- 3. 컬렉션 -->
 <div id="tab-plant" class="tab-content">
-    <div class="card">
-        <div class="flex-between accordion-header" id="new-item-accordion-header" onclick="toggleNewItemForm()">
-            <h4 style="margin:0;">새 아이템 등록 🧸</h4><span class="chevron">▾</span>
-        </div>
-        <div class="accordion-body" id="new-item-accordion-body">
-            <div class="accordion-body-inner">
-                <div style="margin-bottom:8px;">
-                    <label class="muted">아이템 이름</label>
-                    <input id="new-name" type="text" placeholder="예: 고양이 미니어처" style="margin:2px 0 0;">
-                </div>
-                <div style="display:flex;gap:8px;margin-bottom:8px;">
-                    <div style="flex:1.4;"><label class="muted">시리즈</label><select id="new-series" style="margin:2px 0 0;"></select></div>
-                    <div style="flex:.6;"><label class="muted">등록 수량</label><input id="new-quantity" type="number" min="1" step="1" value="1" style="margin:2px 0 0;"></div>
-                </div>
-                <div style="display:flex;gap:8px;margin-bottom:8px;">
-                    <div style="flex:1;"><label class="muted">구입금액 (총액)</label><input id="new-purchase-price" type="number" min="0" placeholder="예: 20000" style="margin:2px 0 0;"></div>
-                    <div style="flex:1;"><label class="muted">획득일</label><input id="new-acquired" type="date" value="2026-08-12" style="margin:2px 0 0;"></div>
-                </div>
-                <div style="margin-bottom:8px;">
-                    <label class="muted">구입 위치</label><input id="new-location" type="text" placeholder="예: 홍대 가챠샵" style="margin:2px 0 0;">
-                </div>
-                <div style="margin-bottom:14px;">
-                    <label class="muted">메모 / 상세설명</label>
-                    <textarea id="new-note" rows="3" placeholder="예: 홍대에서 뽑음 / 도색 살짝 벗겨짐 / 컨디션 좋음 / 중복이라 교환 예정" style="margin:2px 0 0;resize:vertical;"></textarea>
-                </div>
-                <div style="margin-bottom:14px;"><label style="font-size:13px;display:flex;align-items:center;gap:5px;cursor:pointer;"><input id="new-fav" type="checkbox" style="width:auto;margin:0;transform:scale(1.1);"> ⭐ 최애 등록</label></div>
-                <button onclick="addCollectionItem()" style="width:100%;">아이템 등록</button>
-            </div>
-        </div>
-    </div>
-
     <div class="card">
         <div class="flex-between" style="margin-bottom:10px;">
             <h4 style="margin:0;">컬렉션 검색 🦄</h4>
@@ -639,13 +564,51 @@ button.secondary{background:#8A84A8;}
 <!-- 4. 통계 -->
 <div id="tab-stats" class="tab-content">
     <div class="sub-tab">
-        <div class="sub-tab-item active" style="font-size:11px;" onclick="switchStatsTab('expense', this)">구매 통계</div>
+        <div class="sub-tab-item active" style="font-size:11px;" onclick="switchStatsTab('total', this)">전체 통계</div>
+        <div class="sub-tab-item" style="font-size:11px;" onclick="switchStatsTab('expense', this)">구매 통계</div>
         <div class="sub-tab-item" style="font-size:11px;" onclick="switchStatsTab('sale', this)">판매 통계</div>
-        <div class="sub-tab-item" style="font-size:11px;" onclick="switchStatsTab('total', this)">전체 통계</div>
-        <div class="sub-tab-item" style="font-size:11px;" onclick="switchStatsTab('collection', this)">컬렉션</div>
+        <div class="sub-tab-item" style="font-size:11px;" onclick="switchStatsTab('collection', this)">보유현황</div>
     </div>
 
-    <div id="stats-expense-tab" class="sub-content active">
+    <div id="stats-total-tab" class="sub-content active">
+        <div class="card">
+            <h4 style="margin:0 0 4px 0;">누적 순지출</h4>
+            <p class="muted" style="margin:0 0 12px 0;">순지출 = 구매 − 판매</p>
+            <div class="stat-pill net-hero" style="margin-bottom:8px;">
+                <span>💰 순지출</span>
+                <span id="total-stat-net" class="num">0원</span>
+            </div>
+            <div class="summary-grid" style="grid-template-columns:repeat(2,1fr);">
+                <div class="summary-box">
+                    <span class="label">총 구매</span>
+                    <span id="total-stat-expense" class="value" style="color:var(--coin-red);">0원</span>
+                </div>
+                <div class="summary-box">
+                    <span class="label">총 판매</span>
+                    <span id="total-stat-income" class="value" style="color:var(--coin-teal);">0원</span>
+                </div>
+                <div class="summary-box">
+                    <span class="label">총 뽑기 수</span>
+                    <span id="total-stat-pull-count" class="value">0회</span>
+                </div>
+                <div class="summary-box">
+                    <span class="label">개당 평균 구매</span>
+                    <span id="total-stat-avg-spend" class="value">0원</span>
+                </div>
+            </div>
+            <p class="muted" style="margin:10px 0 0;text-align:center;">#이 포함된 아이템은 전체 통계에서 제외됩니다.</p>
+        </div>
+
+        <div class="card">
+            <div class="flex-between" style="margin-bottom:10px;gap:8px;">
+                <h4 style="margin:0;">시리즈별 순지출</h4>
+                <span class="muted">구매 · 판매</span>
+            </div>
+            <div id="total-series-net-list"></div>
+        </div>
+    </div>
+
+    <div id="stats-expense-tab" class="sub-content">
         <div class="card flex-between" style="margin-bottom:14px;gap:8px;flex-wrap:wrap;">
             <h4 style="margin:0;">통계 기간</h4>
             <div style="display:flex;gap:6px;align-items:center;">
@@ -676,19 +639,9 @@ button.secondary{background:#8A84A8;}
         <div class="card">
             <div class="flex-between" style="margin-bottom:10px;">
                 <h4 style="margin:0;">시리즈별 구매금액</h4>
-                <span class="muted">선택한 월 기준</span>
+                <span class="muted" id="stats-period-hint">선택한 월 기준</span>
             </div>
             <div id="stats-series-expense-list"></div>
-        </div>
-
-        <div class="card">
-            <h4 style="margin:0 0 10px 0;">시리즈별 구매 비율</h4>
-            <div style="max-width:250px;margin:0 auto;">
-                <canvas id="expensePieChart"></canvas>
-            </div>
-            <div id="expense-chart-fallback" class="muted" style="display:none;text-align:center;padding:20px 0;">
-                차트 라이브러리를 불러오지 못했습니다.
-            </div>
         </div>
     </div>
 
@@ -724,64 +677,16 @@ button.secondary{background:#8A84A8;}
         <div class="card">
             <div class="flex-between" style="margin-bottom:10px;">
                 <h4 style="margin:0;">시리즈별 판매금액</h4>
-                <span class="muted">선택한 월 기준</span>
+                <span class="muted" id="sale-stats-period-hint">선택한 월 기준</span>
             </div>
             <div id="sale-stats-series-list"></div>
-        </div>
-
-        <div class="card">
-            <h4 style="margin:0 0 10px 0;">시리즈별 판매 비율</h4>
-            <div style="max-width:250px;margin:0 auto;">
-                <canvas id="salePieChart"></canvas>
-            </div>
-            <div id="sale-chart-fallback" class="muted" style="display:none;text-align:center;padding:20px 0;">
-                차트 라이브러리를 불러오지 못했습니다.
-            </div>
-        </div>
-    </div>
-
-    <div id="stats-total-tab" class="sub-content">
-        <div class="card">
-            <h4 style="margin:0 0 10px 0;">전체 누적 요약</h4>
-            <div class="summary-grid" style="grid-template-columns:repeat(2,1fr);">
-                <div class="summary-box">
-                    <span class="label">총 뽑기 수</span>
-                    <span id="total-stat-pull-count" class="value">0회</span>
-                </div>
-                <div class="summary-box">
-                    <span class="label">평균 지출</span>
-                    <span id="total-stat-avg-spend" class="value">0원</span>
-                </div>
-                <div class="summary-box">
-                    <span class="label">총 지출</span>
-                    <span id="total-stat-expense" class="value" style="color:var(--coin-red);">0원</span>
-                </div>
-                <div class="summary-box">
-                    <span class="label">총 수입</span>
-                    <span id="total-stat-income" class="value" style="color:var(--coin-teal);">0원</span>
-                </div>
-            </div>
-            <div class="stat-pill" style="margin-top:8px;">
-                <span>💰 누적 순지출</span>
-                <span id="total-stat-net" class="num">0원</span>
-            </div>
-            <p class="muted" style="margin:10px 0 0;text-align:center;">#이 포함된 아이템은 전체 통계에서 제외됩니다.</p>
-        </div>
-
-        <div class="card">
-            <h4 style="margin:0 0 10px 0;">시리즈별 누적 지출</h4>
-            <div id="total-series-expense-list"></div>
-        </div>
-
-        <div class="card">
-            <h4 style="margin:0 0 10px 0;">시리즈별 보유 현황</h4>
-            <div id="total-series-collection-list"></div>
         </div>
     </div>
 
     <div id="stats-collection-tab" class="sub-content">
         <div class="card">
-            <h4 style="margin:0 0 10px 0;">시리즈별 컬렉션 모아보기</h4>
+            <h4 style="margin:0 0 4px 0;">시리즈별 보유 현황</h4>
+            <p class="muted" style="margin:0 0 12px 0;">시리즈를 누르면 아이템 목록을 볼 수 있어요.</p>
             <div id="stats-plant-group-list"></div>
         </div>
     </div>
@@ -805,7 +710,7 @@ button.secondary{background:#8A84A8;}
     <div id="sub-set-backup" class="sub-content">
         <div class="card">
             <h4 style="margin:0 0 6px 0;">엑셀 내보내기 / 가져오기</h4>
-            <p class="muted" style="margin:0 0 12px 0;line-height:1.5;">컬렉션과 시리즈를 Excel(.xlsx) 파일로 저장하거나 다시 불러올 수 있습니다.</p>
+            <p class="muted" style="margin:0 0 12px 0;line-height:1.5;">컬렉션, 판매이력, 시리즈를 Excel(.xlsx) 파일로 저장하거나 다시 불러올 수 있습니다.<br>판매를 수정할 때는 <b>판매이력</b> 시트의 아이템ID를 그대로 두는 것이 안전합니다.</p>
             <button style="background:var(--sr);width:100%;" onclick="exportExcel()">📥 엑셀로 다운로드</button>
             <label class="file-button" style="margin-top:8px;">📤 엑셀로 업로드<input type="file" id="excel-import-input" accept=".xlsx,.xls" onchange="importExcel(event)"></label>
             <p class="muted" style="margin:10px 0 0;">※ 엑셀 업로드 시 현재 컬렉션 데이터가 업로드한 파일 내용으로 교체됩니다.</p>
@@ -841,28 +746,6 @@ button.secondary{background:#8A84A8;}
         </div>
 
         <div class="card">
-            <h4 style="margin:0 0 10px 0;">보관함 연결</h4>
-            <p id="sync-settings-status" class="muted" style="margin:0 0 12px;line-height:1.5;">아직 연결되지 않았습니다.</p>
-            <label class="muted" for="sync-username-input">사용자 이름</label>
-            <input id="sync-username-input" type="text" placeholder="예: 핸드폰, 노트북" style="margin:2px 0 8px;">
-            <button onclick="saveUserName()" style="width:100%;">사용자 이름 변경</button>
-            <div style="margin-top:16px;padding-top:14px;border-top:1px dashed var(--line);">
-                <label class="muted" for="switch-sync-code-input">새 보관함 코드</label>
-                <input id="switch-sync-code-input" type="text" placeholder="4글자 이상 영어 소문자 알파벳을 입력하세요" style="margin:2px 0 8px;" autocomplete="off" autocapitalize="off" spellcheck="false">
-                <label class="muted" for="switch-username-input">사용자 이름</label>
-                <input id="switch-username-input" type="text" placeholder="예: 노트북" style="margin:2px 0 8px;">
-                <button class="secondary" onclick="switchVault()" style="width:100%;">다른 보관함으로 전환</button>
-            </div>
-            <button class="secondary" onclick="clearDeviceAuth()" style="width:100%;margin-top:10px;">이 기기 연결 해제</button>
-            <div id="legacy-settings-card" class="hidden" style="margin-top:16px;padding-top:14px;border-top:1px dashed var(--line);">
-                <b style="font-size:13px;">이전 버전 데이터</b>
-                <p id="legacy-settings-status" class="muted" style="margin:8px 0;line-height:1.5;">이 기기에 이전 데이터가 남아 있습니다.</p>
-                <button class="secondary" onclick="retryLegacyMigration()" style="width:100%;">이전 데이터 다시 가져오기</button>
-                <button class="danger" onclick="deleteLegacyData()" style="width:100%;margin-top:8px;">이전 데이터 삭제</button>
-            </div>
-        </div>
-
-        <div class="card">
             <h4 style="margin:0 0 10px 0;">화면 설정</h4>
             <div class="setting-row">
                 <div>
@@ -887,7 +770,6 @@ button.secondary{background:#8A84A8;}
 
 
 <button id="scroll-top-btn" class="scroll-top-btn" onclick="scrollToPageTop()" aria-label="맨 위로 이동" title="맨 위로">↑</button>
-<div id="sync-toast" class="sync-toast" role="status" aria-live="polite"></div>
 
 	<div class="bottom-nav">
 		<div class="nav-item active" onclick="switchTab('calendar', this)">
@@ -904,13 +786,6 @@ button.secondary{background:#8A84A8;}
 
 <script>
 const STORAGE_KEY='capsule-toy-diary-v1';
-const WORKSPACE_KEY='gachive-workspace-v2';
-const USER_KEY='gachive-username';
-const SYNC_CODE_KEY='gachive-sync-code';
-const LEGACY_SNAPSHOT_KEY='gachive-legacy-snapshot-v1';
-const LEGACY_CONNECTION_KEY='gachive-legacy-connection-v1';
-const LEGACY_STATUS_KEY='gachive-legacy-status-v1';
-const SAVES_TABLE='gachive_saves';
 const DEFAULT_TITLE='Gachive';
 const SEED_ITEMS=[
     {id:1,name:'고양이 미니어처',series:'미니어처 소품',status:'held',acquired:'2026-08-02',purchasePrice:15000,location:'홍대 가챠샵',fav:true,soldDate:'',salePrice:0,note:'시크릿 노리고 여러 번 돌려서 뽑은 아이템. 포장 상태 양호.'},
@@ -924,23 +799,9 @@ const SEED_ITEMS=[
 const SEED_SERIES=['동물 피규어','미니어처 소품','캐릭터 키링','빵 스트랩'];
 let mockItems=[];
 let managedSeries=[];
-let seriesRecords=[];
 let currentDate=new Date(2026,7,1);
-let expensePieChart=null;
-let salePieChart=null;
 let ledgerTypeFilter='all';
 let appSettings={showScrollTop:true};
-let currentUser='';
-let currentSyncCode='';
-let currentCodeHash='';
-let supabaseClient=null;
-let realtimeChannel=null;
-let syncReady=false;
-let wasRealtimeDisconnected=false;
-let fetchingRemote=false;
-let lifecycleBound=false;
-let saving=false;
-let pendingLegacyCopy=false;
 
 function cloneSeedItems(){return SEED_ITEMS.map(v=>({...v}));}
 function won(n){return Number(n||0).toLocaleString()+'원';}
@@ -983,14 +844,7 @@ function normalizeItem(item){
         location:String(item.location||''),
         fav:Boolean(item.fav),
         sales,
-        note:String(item.note||''),
-        sync_code:String(item.sync_code||item.syncCode||''),
-        workspace_id:String(item.workspace_id||item.workspaceId||''),
-        username:String(item.username||item.user_name||''),
-        created_by:String(item.created_by||item.createdBy||''),
-        created_at:item.created_at||item.createdAt||'',
-        updated_by:String(item.updated_by||item.updatedBy||''),
-        updated_at:item.updated_at||item.updatedAt||''
+        note:String(item.note||'')
     };
 
     syncItemSaleState(normalized);
@@ -1034,1079 +888,27 @@ function isExpenseOnlySeries(series){
     return normalized==='배송비'||normalized==='택배비'||normalized==='수수료';
 }
 function saveState(){
-    try{localStorage.setItem(WORKSPACE_KEY,JSON.stringify({mockItems,managedSeries,seriesRecords,appTitle:getAppTitle(),appSettings}));}
+    try{localStorage.setItem(STORAGE_KEY,JSON.stringify({mockItems,managedSeries,appTitle:getAppTitle(),appSettings}));}
     catch(e){console.warn('저장 실패:',e);}
-}
-function applyLoadedState(data){
-    managedSeries=Array.isArray(data.managedSeries)?data.managedSeries.slice():[];
-    mockItems=(Array.isArray(data.mockItems)?data.mockItems:[]).map(normalizeItem);
-    appSettings={
-        showScrollTop:data.appSettings?.showScrollTop!==false,
-        created_by:data.appSettings?.created_by||'',
-        created_at:data.appSettings?.created_at||'',
-        updated_by:data.appSettings?.updated_by||'',
-        updated_at:data.appSettings?.updated_at||'',
-        workspace_id:data.appSettings?.workspace_id||''
-    };
-    seriesRecords=Array.isArray(data.seriesRecords)?data.seriesRecords.map(normalizeSeriesRecord):[];
-    ensureSeriesRecords();
-    document.querySelector('header .title').innerHTML=`🧸 ${escapeHtml(data.appTitle||DEFAULT_TITLE)}`;
 }
 function loadState(){
     try{
-        const workspace=parseStoredJson(localStorage.getItem(WORKSPACE_KEY));
-        const legacy=parseStoredJson(localStorage.getItem(STORAGE_KEY));
-        const declined=Boolean(getLegacyStatus().declined);
-        const importLegacy=pendingLegacyCopy||(!declined&&!getLegacyStatus().offered);
-        const data=legacyHasUserData(workspace)?workspace
-            :(importLegacy&&legacyHasUserData(legacy)?legacy
-            :(workspace||null));
-        if(data&&typeof data==='object'&&(Array.isArray(data.mockItems)||Array.isArray(data.managedSeries))){
-            applyLoadedState(data);
-            return;
-        }
-    }catch(e){console.warn('불러오기 실패, 빈 보관함으로 시작합니다:',e);}
-    managedSeries=[];
-    mockItems=[];
-    appSettings={showScrollTop:true};
-    seriesRecords=[];
-}
-
-function getEnv(name){
-    const env=window.GACHIVE_ENV||{};
-    return String(env[name]||env['VITE_'+name]||env[name.replace(/^VITE_/,'')]||'').trim();
-}
-function envUrl(){return getEnv('VITE_SUPABASE_URL')||getEnv('SUPABASE_URL');}
-function envKey(){return getEnv('VITE_SUPABASE_PUBLISHABLE_KEY')||getEnv('SUPABASE_PUBLISHABLE_KEY')||getEnv('SUPABASE_ANON_KEY');}
-function hasEnv(){return Boolean(envUrl()&&envKey());}
-function isSyncEnabled(){return Boolean(supabaseClient&&syncReady&&currentSyncCode&&currentCodeHash);}
-function isValidSyncCode(code){return /^[a-z]{4,}$/.test(String(code||''));}
-async function hashCode(text){
-    if(!globalThis.crypto||!crypto.subtle){
-        throw Object.assign(new Error('이 브라우저에서는 보관함 코드를 해시할 수 없습니다. HTTPS 또는 localhost에서 열어주세요.'),{code:'HASH'});
-    }
-    const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode('gachive:'+text));
-    return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join('');
-}
-async function ensureCodeHash(){
-    const code=String(currentSyncCode||'').trim();
-    currentSyncCode=code;
-    currentCodeHash=code?await hashCode(code):'';
-    return currentCodeHash;
-}
-function requireCodeHash(){
-    if(!currentCodeHash){
-        throw Object.assign(new Error('보관함 코드 해시가 준비되지 않았습니다.'),{code:'HASH'});
-    }
-    return currentCodeHash;
-}
-function bindRecordToVault(record){
-    const next=record&&typeof record==='object'?record:{};
-    delete next.sync_code;
-    delete next.syncCode;
-    next.workspace_id=currentCodeHash;
-    next.username=currentUser||next.username||'';
-    return next;
-}
-function isOnlySeedData(){
-    if(mockItems.length!==SEED_ITEMS.length)return false;
-    const seedById=new Map(SEED_ITEMS.map(item=>[item.id,item]));
-    return mockItems.every(item=>{
-        const seed=seedById.get(item.id);
-        return Boolean(seed)&&item.name===seed.name;
-    });
-}
-function hasLocalUserData(){
-    if(managedSeries.some(name=>!SEED_SERIES.includes(name)))return true;
-    if(!mockItems.length)return false;
-    if(isOnlySeedData())return false;
-    if(mockItems.length!==SEED_ITEMS.length)return true;
-    const seedById=new Map(SEED_ITEMS.map(item=>[item.id,item]));
-    return mockItems.some(item=>{
-        const seed=seedById.get(item.id);
-        return !seed||item.name!==seed.name||Number(item.purchasePrice)!==Number(seed.purchasePrice);
-    });
-}
-function nowIso(){return new Date().toISOString();}
-function isNewerTimestamp(a,b){
-    return (Date.parse(a||0)||0)>(Date.parse(b||0)||0);
-}
-function snapshotState(){
-    return {
-        mockItems:JSON.parse(JSON.stringify(mockItems)),
-        managedSeries:managedSeries.slice(),
-        seriesRecords:JSON.parse(JSON.stringify(seriesRecords)),
-        appSettings:{...appSettings},
-        appTitle:getAppTitle(),
-        vaultCreatedBy:appSettings.created_by||currentUser,
-        vaultCreatedAt:appSettings.created_at||''
-    };
-}
-function restoreState(snap){
-    mockItems=snap.mockItems;
-    managedSeries=snap.managedSeries;
-    seriesRecords=snap.seriesRecords;
-    appSettings=snap.appSettings;
-    document.querySelector('header .title').innerHTML=`🧸 ${escapeHtml(snap.appTitle)}`;
-}
-function stampCreate(obj){
-    const ts=nowIso();
-    bindRecordToVault(obj);
-    obj.created_by=currentUser;
-    obj.created_at=ts;
-    obj.updated_by=currentUser;
-    obj.updated_at=ts;
-    return obj;
-}
-function stampUpdate(obj){
-    bindRecordToVault(obj);
-    obj.updated_by=currentUser;
-    obj.updated_at=nowIso();
-    return obj;
-}
-function normalizeSeriesRecord(record){
-    return {
-        id:Number(record?.id)||Date.now()+Math.floor(Math.random()*10000),
-        name:String(record?.name||''),
-        sync_code:'',
-        workspace_id:String(record?.workspace_id||currentCodeHash||''),
-        username:String(record?.username||''),
-        created_by:String(record?.created_by||''),
-        created_at:record?.created_at||'',
-        updated_by:String(record?.updated_by||''),
-        updated_at:record?.updated_at||''
-    };
-}
-function ensureSeriesRecords(target){
-    const seriesList=target||managedSeries;
-    const records=target?target.seriesRecords||[]:seriesRecords;
-    const byName=new Map(records.map(record=>[record.name,record]));
-    const next=seriesList.map(name=>{
-        const existing=byName.get(name);
-        return existing?normalizeSeriesRecord(existing):normalizeSeriesRecord({id:Date.now()+Math.floor(Math.random()*10000),name});
-    });
-    if(target){
-        target.seriesRecords=next;
-        return next;
-    }
-    seriesRecords=next;
-    return seriesRecords;
-}
-function setSeriesFromNames(names,target){
-    const dest=target||{seriesRecords,managedSeries};
-    const previous=new Map((dest.seriesRecords||[]).map(record=>[record.name,record]));
-    dest.managedSeries=names.slice();
-    dest.seriesRecords=dest.managedSeries.map(name=>previous.get(name)||normalizeSeriesRecord({id:Date.now()+Math.floor(Math.random()*10000),name}));
-    if(!target){
-        managedSeries=dest.managedSeries;
-        seriesRecords=dest.seriesRecords;
-    }
-}
-function belongsToCurrentVault(record){
-    const hash=String(record?.workspace_id||record?.code_hash||'').trim();
-    const code=String(record?.sync_code||'').trim();
-    if(!hash&&!code)return true;
-    if(currentCodeHash&&hash===currentCodeHash)return true;
-    if(currentSyncCode&&(code===currentSyncCode||hash===currentSyncCode))return true;
-    return false;
-}
-function missingColumnFromError(err){
-    const text=String(err?.message||err?.details||err?.hint||'');
-    const match=text.match(/Could not find the '([^']+)' column/i)
-        ||text.match(/column ["']?([a-zA-Z_]+)["']? of relation/i)
-        ||text.match(/column ["']?([a-zA-Z_]+)["']? does not exist/i);
-    return match?match[1]:'';
-}
-function classifySupabaseError(err){
-    const code=String(err?.code||'');
-    if(code==='42P01')return 'missing_table';
-    if(code==='PGRST205')return 'table_not_in_cache';
-    if(code==='42703')return 'missing_column';
-    if(code==='42501'||code==='PGRST301')return 'rls';
-    if(code==='HASH')return 'hash';
-    if(!hasEnv())return 'env';
-    if(typeof navigator!=='undefined'&&navigator.onLine===false)return 'network';
-    if(/Failed to fetch|NetworkError|fetch/i.test(String(err?.message||err||'')))return 'network';
-    return 'unknown';
-}
-function userErrorMessage(kind,err){
-    if(kind==='missing_table')return '연결된 테이블을 찾지 못했습니다. 기존 gachive_saves 테이블이 있는 프로젝트인지 확인해주세요.';
-    if(kind==='table_not_in_cache')return '테이블을 아직 찾지 못했습니다. 잠시 후 다시 시도하거나 Supabase 스키마 캐시를 확인해주세요.';
-    if(kind==='missing_column')return '필요한 컬럼이 없습니다. supabase/alter-gachive-saves.sql을 확인해주세요.';
-    if(kind==='rls')return '데이터 권한이 없어 보관함에 접근하지 못했습니다. Supabase RLS/권한 설정을 확인해주세요.';
-    if(kind==='env')return 'Supabase 연결 정보가 없습니다. .env와 env.js의 Project URL, Publishable Key를 확인해주세요.';
-    if(kind==='network')return '네트워크 연결을 확인한 뒤 다시 시도해주세요.';
-    if(kind==='hash')return err?.message||'보관함 코드를 해시하지 못했습니다.';
-    return err?.message?`저장 또는 조회에 실패했습니다. ${err.message}`:'저장 또는 조회에 실패했습니다.';
-}
-function reportSupabaseError(err,tableName,operation,targetEl){
-    const kind=classifySupabaseError(err);
-    console.error({
-        code:err?.code,
-        message:err?.message,
-        details:err?.details,
-        hint:err?.hint,
-        table:tableName,
-        operation
-    });
-    const text=userErrorMessage(kind,err);
-    if(targetEl)targetEl.textContent=text;
-    else{
-        const toast=document.getElementById('sync-toast');
-        if(toast){
-            toast.textContent=text;
-            toast.classList.add('show','error');
-            clearTimeout(reportSupabaseError._timer);
-            reportSupabaseError._timer=setTimeout(()=>toast.classList.remove('show','error'),4500);
-        }
-        alert(text);
-    }
-    updateSyncStatus('error',text);
-}
-function updateSyncStatus(state,detail){
-    const el=document.getElementById('sync-status');
-    const settingsEl=document.getElementById('sync-settings-status');
-    const labels={
-        idle:currentSyncCode?`${currentSyncCode} · ${currentUser||'로컬'}`:'',
-        connecting:currentSyncCode?`${currentSyncCode} · 준비 중`:'연결 중',
-        saving:'저장 중',
-        synced:currentSyncCode?`${currentSyncCode} · ${currentUser||'연결됨'}`:'연결됨',
-        reconnecting:'다시 연결 중…',
-        error:detail||'동기화 오류'
-    };
-    const text=labels[state]||detail||'';
-    if(el){
-        el.textContent=text;
-        el.dataset.state=state;
-    }
-    if(settingsEl){
-        settingsEl.textContent=currentSyncCode
-            ?`현재 보관함 코드: ${currentSyncCode} / 사용자 이름: ${currentUser||'-'}`
-            :(text||'아직 연결되지 않았습니다.');
-    }
-}
-function hideAuth(){document.getElementById('auth-overlay')?.classList.add('hidden');}
-function showAuth(){
-    const overlay=document.getElementById('auth-overlay');
-    const codeInput=document.getElementById('auth-code-input');
-    const nameInput=document.getElementById('auth-name-input');
-    if(codeInput&&currentSyncCode)codeInput.value=currentSyncCode;
-    if(nameInput&&currentUser)nameInput.value=currentUser;
-    overlay?.classList.remove('hidden');
-}
-function applyCurrentUserToForm(){
-    const input=document.getElementById('sync-username-input');
-    if(input)input.value=currentUser;
-    const switchName=document.getElementById('switch-username-input');
-    if(switchName&&!switchName.value)switchName.value=currentUser;
-}
-function persistSession(){
-    if(currentUser)localStorage.setItem(USER_KEY,currentUser);
-    if(currentSyncCode)localStorage.setItem(SYNC_CODE_KEY,currentSyncCode);
-}
-function readSessionKeys(){
-    return {
-        user:localStorage.getItem(USER_KEY)||'',
-        code:localStorage.getItem(SYNC_CODE_KEY)||''
-    };
-}
-function restoreSessionKeys(prev){
-    if(prev?.user)localStorage.setItem(USER_KEY,prev.user);
-    else localStorage.removeItem(USER_KEY);
-    if(prev?.code)localStorage.setItem(SYNC_CODE_KEY,prev.code);
-    else localStorage.removeItem(SYNC_CODE_KEY);
-}
-async function restoreSession(prev){
-    currentUser=prev?.user||'';
-    currentSyncCode=prev?.code||'';
-    restoreSessionKeys(prev);
-    currentCodeHash=currentSyncCode?await hashCode(currentSyncCode):'';
-}
-function clearEmptyVault(){
-    mockItems=[];
-    managedSeries=[];
-    seriesRecords=[];
-}
-
-function parseStoredJson(raw){
-    if(!raw)return null;
-    try{return JSON.parse(raw);}catch(e){return null;}
-}
-function readLegacyStoredData(){
-    return getLegacySnapshot()?.data||parseStoredJson(localStorage.getItem(STORAGE_KEY));
-}
-function legacyHasUserData(data){
-    if(!data||typeof data!=='object')return false;
-    const items=Array.isArray(data.mockItems)?data.mockItems:[];
-    const series=Array.isArray(data.managedSeries)?data.managedSeries:[];
-    if(series.some(name=>!SEED_SERIES.includes(name)))return true;
-    if(!items.length)return false;
-    if(items.length!==SEED_ITEMS.length)return true;
-    const seedById=new Map(SEED_ITEMS.map(item=>[item.id,item]));
-    return items.some(item=>{
-        const seed=seedById.get(Number(item.id));
-        return !seed||item.name!==seed.name||Number(item.purchasePrice)!==Number(seed.purchasePrice);
-    });
-}
-function captureLegacyIfNeeded(){
-    if(localStorage.getItem(LEGACY_SNAPSHOT_KEY))return;
-    const data=parseStoredJson(localStorage.getItem(STORAGE_KEY));
-    const connection={
-        username:localStorage.getItem(USER_KEY)||'',
-        syncCode:localStorage.getItem(SYNC_CODE_KEY)||'',
-        unlocked:localStorage.getItem('gachive-device-unlocked')||''
-    };
-    const hasConnection=Boolean(connection.username||connection.syncCode||connection.unlocked);
-    const hasData=legacyHasUserData(data);
-    if(!hasData&&!hasConnection)return;
-    localStorage.setItem(LEGACY_SNAPSHOT_KEY,JSON.stringify({
-        capturedAt:nowIso(),
-        sourceKey:STORAGE_KEY,
-        data
-    }));
-    if(hasConnection){
-        localStorage.setItem(LEGACY_CONNECTION_KEY,JSON.stringify(connection));
-    }
-}
-function getLegacySnapshot(){
-    return parseStoredJson(localStorage.getItem(LEGACY_SNAPSHOT_KEY));
-}
-function getLegacyStatus(){
-    return parseStoredJson(localStorage.getItem(LEGACY_STATUS_KEY))||{};
-}
-function saveLegacyStatus(patch){
-    localStorage.setItem(LEGACY_STATUS_KEY,JSON.stringify({...getLegacyStatus(),...patch}));
-}
-function hasLegacyOffer(){
-    const snapshot=getLegacySnapshot();
-    return legacyHasUserData(snapshot?.data);
-}
-function updateLegacySettingsCard(){
-    const card=document.getElementById('legacy-settings-card');
-    const statusEl=document.getElementById('legacy-settings-status');
-    if(!card)return;
-    const hasLegacy=Boolean(getLegacySnapshot()||localStorage.getItem(STORAGE_KEY)||localStorage.getItem(LEGACY_CONNECTION_KEY));
-    card.classList.toggle('hidden',!hasLegacy);
-    if(!statusEl||!hasLegacy)return;
-    const status=getLegacyStatus();
-    if(status.lastResult){
-        const r=status.lastResult;
-        statusEl.textContent=`이전 데이터가 이 기기에 남아 있습니다. 마지막 가져오기: 대상 ${r.total}건 / 성공 ${r.success}건 / 실패 ${r.fail}건${r.verified?' / 검증 완료':''}`;
-    }else{
-        statusEl.textContent='이전 버전 데이터와 연결 정보가 이 기기에 남아 있습니다. 가져오기를 해도 바로 삭제되지 않습니다.';
-    }
-}
-function showLegacyPrompt(){
-    document.getElementById('legacy-prompt')?.classList.remove('hidden');
-    document.getElementById('auth-form')?.classList.add('hidden');
-    document.getElementById('auth-overlay')?.classList.remove('hidden');
-}
-function showAuthForm(leadText){
-    document.getElementById('legacy-prompt')?.classList.add('hidden');
-    document.getElementById('auth-form')?.classList.remove('hidden');
-    const lead=document.getElementById('auth-lead');
-    if(lead&&leadText)lead.innerHTML=leadText;
-}
-function showMigrationResult(result){
-    const text=`대상 ${result.total}건 / 성공 ${result.success}건 / 실패 ${result.fail}건`+(result.verified?'\n검증이 완료되었습니다.':'\n일부 데이터가 확인되지 않았습니다.');
-    const el=document.getElementById('legacy-result');
-    if(el)el.textContent=text.replace('\n',' · ');
-    alert(text);
-    saveLegacyStatus({lastResult:result,migratedAt:result.verified?nowIso():getLegacyStatus().migratedAt||''});
-    updateLegacySettingsCard();
-}
-function startEmptyWorkspacePreservingLegacy(){
-    clearEmptyVault();
-    appSettings={showScrollTop:true};
-    document.querySelector('header .title').innerHTML=`🧸 ${escapeHtml(DEFAULT_TITLE)}`;
-    saveState();
-    renderAll();
-}
-function chooseLegacyMigrate(yes){
-    pendingLegacyCopy=Boolean(yes);
-    saveLegacyStatus({declined:!yes,offered:true});
-    if(!yes)startEmptyWorkspacePreservingLegacy();
-    const hasSession=isValidSyncCode(currentSyncCode)&&Boolean(currentUser);
-    if(hasSession){
-        document.getElementById('legacy-prompt')?.classList.add('hidden');
-        if(!yes){
-            hideAuth();
-            Promise.resolve(startSync()).finally(updateLegacySettingsCard);
-            return;
-        }
-        showAuthForm('이전 데이터를 현재 보관함으로 복사합니다.');
-        Promise.resolve((async()=>{
-            const ok=await startSync();
-            if(!ok)return;
-            const result=await migrateLegacyToCurrentVault();
-            showMigrationResult(result);
-            if(result.verified){
-                persistSession();
-                hideAuth();
-            }
-            updateLegacySettingsCard();
-        })());
-        return;
-    }
-    showAuthForm(yes
-        ?'새 보관함 코드와 사용자 이름을 만든 뒤, 이전 데이터를 그 보관함으로 복사합니다.'
-        :'빈 보관함으로 시작합니다. 이전 데이터는 이 기기에 그대로 남겨 둡니다.');
-}
-function stampMigratedRecord(record){
-    const next=record&&typeof record==='object'?record:{};
-    const ts=next.created_at||nowIso();
-    bindRecordToVault(next);
-    next.created_by=next.created_by||currentUser;
-    next.created_at=ts;
-    next.updated_by=currentUser;
-    next.updated_at=nowIso();
-    return next;
-}
-function buildMigratedState(legacy){
-    const items=(Array.isArray(legacy?.mockItems)?legacy.mockItems:[]).map(item=>stampMigratedRecord(normalizeItem(item)));
-    const names=Array.isArray(legacy?.managedSeries)&&legacy.managedSeries.length
-        ?legacy.managedSeries.slice()
-        :[...new Set(items.map(item=>item.series).filter(Boolean))];
-    const series=(Array.isArray(legacy?.seriesRecords)?legacy.seriesRecords:names.map(name=>({id:Date.now()+Math.floor(Math.random()*10000),name})))
-        .map(record=>stampMigratedRecord(normalizeSeriesRecord(record)));
-    const appSettings={
-        showScrollTop:legacy?.appSettings?.showScrollTop!==false,
-        workspace_id:currentCodeHash,
-        username:currentUser
-    };
-    stampMigratedRecord(appSettings);
-    return {
-        mockItems:items,
-        managedSeries:names,
-        seriesRecords:series,
-        appSettings,
-        appTitle:legacy?.appTitle||DEFAULT_TITLE,
-        vaultCreatedBy:currentUser,
-        vaultCreatedAt:nowIso()
-    };
-}
-async function verifyMigratedState(expected){
-    const row=await fetchVaultRow();
-    if(!row?.payload)return {verified:false,success:0,fail:expected.total,details:['원격 보관함을 다시 읽지 못했습니다.']};
-    const remoteItems=Array.isArray(row.payload.mockItems)?row.payload.mockItems:[];
-    const remoteSeries=Array.isArray(row.payload.managedSeries)?row.payload.managedSeries:[];
-    const remoteById=new Map(remoteItems.map(item=>[Number(item.id),item]));
-    let success=0;
-    let fail=0;
-    const details=[];
-    expected.items.forEach(item=>{
-        const remote=remoteById.get(Number(item.id));
-        const ok=remote
-            && String(remote.workspace_id||'')===currentCodeHash
-            && (String(remote.username||'')===currentUser||String(remote.created_by||'')===currentUser);
-        if(ok)success+=1;
-        else{
-            fail+=1;
-            details.push(`아이템 ${item.name||item.id}`);
-        }
-    });
-    expected.series.forEach(name=>{
-        if(remoteSeries.includes(name))success+=1;
-        else{
-            fail+=1;
-            details.push(`시리즈 ${name}`);
-        }
-    });
-    if(expected.appTitle){
-        if(String(row.payload.appTitle||'')===String(expected.appTitle))success+=1;
-        else{
-            fail+=1;
-            details.push('앱 이름');
-        }
-    }
-    return {verified:fail===0,success,fail,details};
-}
-async function migrateLegacyToCurrentVault(){
-    const legacy=readLegacyStoredData();
-    if(!legacyHasUserData(legacy)){
-        return {ok:false,verified:false,total:0,success:0,fail:0};
-    }
-    const migrated=buildMigratedState(legacy);
-    const expectedItems=migrated.mockItems.slice();
-    const expectedSeries=migrated.managedSeries.slice();
-    const total=expectedItems.length+expectedSeries.length+(migrated.appTitle?1:0);
-    try{
-        const existing=await fetchVaultRow();
-        if(existing?.payload){
-            const remoteItems=(Array.isArray(existing.payload.mockItems)?existing.payload.mockItems:[]).map(normalizeItem);
-            const byId=new Map(remoteItems.map(item=>[Number(item.id),item]));
-            expectedItems.forEach(item=>byId.set(Number(item.id),item));
-            migrated.mockItems=[...byId.values()];
-            migrated.managedSeries=[...new Set([...(existing.payload.managedSeries||[]),...expectedSeries])];
-            setSeriesFromNames(migrated.managedSeries,migrated);
-            migrated.seriesRecords=migrated.seriesRecords.map(stampMigratedRecord);
-        }
-        await upsertVault(migrated);
-        restoreState(migrated);
-        saveState();
-        renderAll();
-        const checked=await verifyMigratedState({
-            items:expectedItems,
-            series:expectedSeries,
-            appTitle:migrated.appTitle,
-            total
-        });
-        return {
-            ok:checked.verified,
-            verified:checked.verified,
-            total,
-            success:checked.success,
-            fail:checked.fail,
-            details:checked.details
-        };
-    }catch(err){
-        reportSupabaseError(err,SAVES_TABLE,'migrate');
-        return {ok:false,verified:false,total,success:0,fail:total};
-    }
-}
-async function retryLegacyMigration(){
-    if(!currentSyncCode||!currentCodeHash||!currentUser||!syncReady){
-        pendingLegacyCopy=true;
-        saveLegacyStatus({declined:false,offered:true});
-        showAuth();
-        showAuthForm('새 보관함 코드와 사용자 이름을 만든 뒤, 이전 데이터를 그 보관함으로 복사합니다.');
-        return;
-    }
-    const result=await migrateLegacyToCurrentVault();
-    showMigrationResult(result);
-}
-function deleteLegacyData(){
-    if(!confirm('이전 버전 데이터와 이전 연결 정보를 이 기기에서 삭제할까요? 지금 사용 중인 새 보관함 데이터는 그대로 둡니다.'))return;
-    localStorage.removeItem(STORAGE_KEY);
-    localStorage.removeItem(LEGACY_SNAPSHOT_KEY);
-    localStorage.removeItem(LEGACY_CONNECTION_KEY);
-    localStorage.removeItem('gachive-device-unlocked');
-    saveLegacyStatus({deletedAt:nowIso()});
-    updateLegacySettingsCard();
-    alert('이전 데이터를 이 기기에서 삭제했습니다.');
-}
-
-function payloadFromState(state){
-    const settings={...(state.appSettings||{})};
-    delete settings.sync_code;
-    settings.workspace_id=currentCodeHash;
-    settings.username=settings.username||currentUser;
-    return {
-        mockItems:(state.mockItems||[]).map(item=>{
-            const normalized=bindRecordToVault(normalizeItem(item));
-            normalized.username=normalized.username||currentUser;
-            normalized.created_by=normalized.created_by||currentUser;
-            normalized.updated_by=normalized.updated_by||currentUser;
-            return normalized;
-        }),
-        managedSeries:state.managedSeries.slice(),
-        seriesRecords:(state.seriesRecords||[]).map(record=>bindRecordToVault(normalizeSeriesRecord(record))),
-        appTitle:state.appTitle,
-        appSettings:settings,
-        workspace_id:currentCodeHash
-    };
-}
-function applyPayload(payload,rowMeta){
-    const data=payload&&typeof payload==='object'?payload:{};
-    const items=Array.isArray(data.mockItems)?data.mockItems:Array.isArray(data.items)?data.items:[];
-    mockItems=items.map(normalizeItem).filter(belongsToCurrentVault);
-    const names=Array.isArray(data.managedSeries)&&data.managedSeries.length
-        ?data.managedSeries.slice()
-        :[...new Set(mockItems.map(item=>item.series).filter(Boolean))];
-    managedSeries=names;
-    seriesRecords=Array.isArray(data.seriesRecords)?data.seriesRecords.map(normalizeSeriesRecord):[];
-    ensureSeriesRecords();
-    if(data.appTitle)document.querySelector('header .title').innerHTML=`🧸 ${escapeHtml(data.appTitle)}`;
-    if(data.appSettings&&typeof data.appSettings==='object'){
-        appSettings={
-            showScrollTop:data.appSettings.showScrollTop!==false,
-            created_by:data.appSettings.created_by||rowMeta?.created_by||'',
-            created_at:data.appSettings.created_at||rowMeta?.created_at||'',
-            updated_by:data.appSettings.updated_by||rowMeta?.updated_by||'',
-            updated_at:data.appSettings.updated_at||rowMeta?.updated_at||''
-        };
-    }else if(rowMeta){
-        appSettings={
-            ...appSettings,
-            created_by:rowMeta.created_by||appSettings.created_by||'',
-            created_at:rowMeta.created_at||appSettings.created_at||'',
-            updated_by:rowMeta.updated_by||appSettings.updated_by||'',
-            updated_at:rowMeta.updated_at||appSettings.updated_at||''
-        };
-    }
-    updateScrollTopButton();
-}
-function vaultToRow(state){
-    const codeHash=requireCodeHash();
-    const createdAt=state.vaultCreatedAt||state.appSettings?.created_at||nowIso();
-    const createdBy=state.vaultCreatedBy||state.appSettings?.created_by||currentUser;
-    const row={
-        code_hash:codeHash,
-        payload:payloadFromState(state),
-        created_by:createdBy,
-        created_at:createdAt,
-        updated_by:currentUser,
-        updated_at:nowIso()
-    };
-    if(!row.code_hash){
-        throw Object.assign(new Error('저장 payload에 code_hash가 없습니다.'),{code:'HASH'});
-    }
-    if('sync_code' in row){
-        delete row.sync_code;
-    }
-    return row;
-}
-
-function ensureClient(){
-    if(supabaseClient)return supabaseClient;
-    if(typeof supabase==='undefined')throw new Error('Supabase 클라이언트를 불러오지 못했습니다.');
-    if(!hasEnv())throw Object.assign(new Error('환경변수가 없습니다.'),{code:'ENV'});
-    supabaseClient=supabase.createClient(envUrl(),envKey(),{
-        realtime:{params:{eventsPerSecond:10}}
-    });
-    return supabaseClient;
-}
-
-async function fetchVaultRow(){
-    const codeHash=requireCodeHash();
-    const {data,error}=await supabaseClient
-        .from(SAVES_TABLE)
-        .select('*')
-        .eq('code_hash',codeHash)
-        .order('updated_at',{ascending:false})
-        .limit(1);
-    if(error)throw error;
-    return Array.isArray(data)&&data.length?data[0]:null;
-}
-
-async function execVaultWrite(buildQuery, body){
-    const protectedCols=new Set(['code_hash','payload','updated_at']);
-    const next={...body};
-    delete next.sync_code;
-    for(let i=0;i<8;i++){
-        const {error}=await buildQuery(next);
-        if(!error)return;
-        const col=missingColumnFromError(error);
-        if(col&&!protectedCols.has(col)&&Object.prototype.hasOwnProperty.call(next,col)){
-            delete next[col];
-            continue;
-        }
-        throw error;
-    }
-}
-
-async function upsertVault(state){
-    const row=vaultToRow(state);
-    if(!row.code_hash){
-        throw Object.assign(new Error('저장 payload에 code_hash가 없습니다.'),{code:'HASH'});
-    }
-    console.debug('gachive save payload',{
-        keys:Object.keys(row),
-        hasCodeHash:Boolean(row.code_hash),
-        codeHashLength:String(row.code_hash||'').length,
-        hasSyncCode:Object.prototype.hasOwnProperty.call(row,'sync_code'),
-        created_by:row.created_by,
-        updated_by:row.updated_by
-    });
-    const existing=await fetchVaultRow();
-    if(existing){
-        if(existing.updated_at&&isNewerTimestamp(existing.updated_at,row.updated_at)){
-            applyPayload(existing.payload,existing);
-            throw Object.assign(new Error('다른 기기에서 더 최근 데이터가 저장되어 있습니다. 화면을 다시 불러왔습니다.'),{code:'CONFLICT'});
-        }
-        await execVaultWrite((body)=>supabaseClient
-            .from(SAVES_TABLE)
-            .update(body)
-            .eq('code_hash',row.code_hash),{
-            code_hash:row.code_hash,
-            payload:row.payload,
-            updated_by:row.updated_by,
-            updated_at:row.updated_at
-        });
-        return;
-    }
-    await execVaultWrite((body)=>supabaseClient.from(SAVES_TABLE).insert(body),row);
-}
-
-function stampStateForCurrentVault(state){
-    const next=JSON.parse(JSON.stringify(state||{}));
-    next.mockItems=(Array.isArray(next.mockItems)?next.mockItems:[]).map(item=>{
-        const normalized=normalizeItem(item);
-        if(!normalized.created_at)stampCreate(normalized);
-        else stampUpdate(normalized);
-        return normalized;
-    });
-    next.managedSeries=Array.isArray(next.managedSeries)?next.managedSeries.slice():[];
-    if(!next.managedSeries.length){
-        next.managedSeries=[...new Set(next.mockItems.map(item=>item.series).filter(Boolean))];
-    }
-    next.seriesRecords=(Array.isArray(next.seriesRecords)?next.seriesRecords:[]).map(record=>{
-        const normalized=normalizeSeriesRecord(record);
-        if(!normalized.created_at)stampCreate(normalized);
-        else stampUpdate(normalized);
-        return normalized;
-    });
-    setSeriesFromNames(next.managedSeries,next);
-    next.appSettings=next.appSettings&&typeof next.appSettings==='object'?{...next.appSettings}:{showScrollTop:true};
-    if(!next.appSettings.created_at)stampCreate(next.appSettings);
-    else stampUpdate(next.appSettings);
-    next.appTitle=next.appTitle||DEFAULT_TITLE;
-    next.vaultCreatedBy=next.vaultCreatedBy||next.appSettings.created_by||currentUser;
-    next.vaultCreatedAt=next.vaultCreatedAt||next.appSettings.created_at||nowIso();
-    return next;
-}
-function mergeVaultStates(base,extra){
-    const byId=new Map((base.mockItems||[]).map(item=>[Number(item.id),item]));
-    (extra.mockItems||[]).forEach(item=>{
-        const id=Number(item.id);
-        if(!byId.has(id))byId.set(id,item);
-    });
-    const names=[...new Set([...(base.managedSeries||[]),...(extra.managedSeries||[])])];
-    const merged={
-        mockItems:[...byId.values()],
-        managedSeries:names,
-        seriesRecords:[],
-        appSettings:{...(extra.appSettings||{}),...(base.appSettings||{})},
-        appTitle:base.appTitle||extra.appTitle||DEFAULT_TITLE,
-        vaultCreatedBy:base.vaultCreatedBy||extra.vaultCreatedBy||currentUser,
-        vaultCreatedAt:base.vaultCreatedAt||extra.vaultCreatedAt||nowIso()
-    };
-    setSeriesFromNames(names,merged);
-    return merged;
-}
-function collectLocalStateForNewVault(){
-    if(pendingLegacyCopy){
-        const legacy=readLegacyStoredData();
-        let state=(hasLocalUserData()||mockItems.length||managedSeries.length)?snapshotState():null;
-        if(legacyHasUserData(legacy)){
-            const migrated=buildMigratedState(legacy);
-            state=state?mergeVaultStates(stampStateForCurrentVault(state),migrated):migrated;
-        }
-        if(!state){
-            if(!appSettings.created_at)stampCreate(appSettings);
-            state=snapshotState();
-        }
-        return stampStateForCurrentVault(state);
-    }
-    if(!appSettings.created_at)stampCreate(appSettings);
-    return stampStateForCurrentVault(snapshotState());
-}
-async function createNewVault(){
-    const state=collectLocalStateForNewVault();
-    await upsertVault(state);
-    restoreState(state);
-    saveState();
-    renderAll();
-}
-
-async function commitChange(mutator,afterSuccess){
-    if(saving){
-        alert('저장 중입니다. 잠시만 기다려주세요.');
-        return false;
-    }
-    saving=true;
-    updateSyncStatus('saving');
-    try{
-        const draft=snapshotState();
-        mutator(draft);
-        if(isSyncEnabled())await upsertVault(draft);
-        restoreState(draft);
-        saveState();
-        if(typeof afterSuccess==='function')afterSuccess();
-        else renderAll();
-        updateSyncStatus('synced');
-        return true;
-    }catch(err){
-        reportSupabaseError(err,SAVES_TABLE,'save');
-        return false;
-    }finally{
-        saving=false;
-    }
-}
-
-async function replaceImportedData({items,series,appTitle,appSettings:nextSettings}){
-    if(!Array.isArray(items)){
-        alert('컬렉션 데이터가 없습니다.');
-        return false;
-    }
-    return commitChange(draft=>{
-        draft.mockItems=items.map(item=>{
-            const normalized=normalizeItem(item);
-            if(!normalized.created_at)stampCreate(normalized);
-            else stampUpdate(normalized);
-            return normalized;
-        });
-        setSeriesFromNames(Array.isArray(series)&&series.length?series:[...new Set(draft.mockItems.map(item=>item.series).filter(Boolean))],draft);
-        draft.seriesRecords.forEach(record=>{
-            if(!record.created_at)stampCreate(record);
-            else stampUpdate(record);
-        });
-        if(nextSettings&&typeof nextSettings==='object'){
-            draft.appSettings={
-                ...draft.appSettings,
-                showScrollTop:nextSettings.showScrollTop!==false
+        const raw=localStorage.getItem(STORAGE_KEY);
+        if(raw){
+            const data=JSON.parse(raw);
+            managedSeries=Array.isArray(data.managedSeries)&&data.managedSeries.length?data.managedSeries.slice():SEED_SERIES.slice();
+            mockItems=(Array.isArray(data.mockItems)?data.mockItems:cloneSeedItems()).map(normalizeItem);
+            appSettings={
+                showScrollTop:data.appSettings?.showScrollTop!==false
             };
-        }
-        stampUpdate(draft.appSettings);
-        if(!draft.appSettings.created_at){
-            draft.appSettings.created_by=currentUser;
-            draft.appSettings.created_at=draft.appSettings.updated_at;
-        }
-        if(appTitle)draft.appTitle=appTitle;
-    },()=>{
-        renderAll();
-        updateScrollTopButton();
-    });
-}
-
-async function fetchRemoteAll(options={}){
-    if(!supabaseClient||!currentCodeHash||fetchingRemote)return false;
-    fetchingRemote=true;
-    updateSyncStatus(wasRealtimeDisconnected?'reconnecting':'connecting');
-    try{
-        const row=await fetchVaultRow();
-        if(!row){
-            if(options.createIfMissing){
-                await createNewVault();
-            }else if(!options.keepLocal){
-                clearEmptyVault();
-                saveState();
-                renderAll();
-            }
-        }else if(pendingLegacyCopy&&!legacyHasUserData(row.payload)&&(hasLocalUserData()||legacyHasUserData(readLegacyStoredData()))){
-            await createNewVault();
-        }else{
-            applyPayload(row.payload,row);
-            saveState();
-            renderAll();
-        }
-        updateSyncStatus('synced');
-        return true;
-    }catch(err){
-        reportSupabaseError(err,SAVES_TABLE,options.createIfMissing?'save':'fetch');
-        return false;
-    }finally{
-        fetchingRemote=false;
-    }
-}
-
-function handleVaultPayload(payload){
-    const row=payload.new||payload.old||{};
-    const hash=String(row.code_hash||row.payload?.code_hash||row.payload?.workspace_id||'').trim();
-    if(!currentCodeHash||(hash&&hash!==currentCodeHash))return;
-    if(payload.eventType==='DELETE'||!payload.new){
-        clearEmptyVault();
-        saveState();
-        renderAll();
-        return;
-    }
-    if(appSettings.updated_at&&isNewerTimestamp(appSettings.updated_at,row.updated_at))return;
-    applyPayload(row.payload,row);
-    saveState();
-    renderAll();
-}
-
-function unsubscribeRealtime(){
-    if(realtimeChannel&&supabaseClient){
-        supabaseClient.removeChannel(realtimeChannel);
-    }
-    realtimeChannel=null;
-}
-function subscribeRealtime(){
-    if(!supabaseClient||!currentCodeHash)return;
-    unsubscribeRealtime();
-    const filter=/^[A-Za-z0-9_-]+$/.test(currentCodeHash)?`code_hash=eq.${currentCodeHash}`:undefined;
-    const change=(event)=>({event,schema:'public',table:SAVES_TABLE,...(filter?{filter}:{})});
-    realtimeChannel=supabaseClient.channel(`gachive-sync-${currentCodeHash}`)
-        .on('postgres_changes',change('INSERT'),handleVaultPayload)
-        .on('postgres_changes',change('UPDATE'),handleVaultPayload)
-        .on('postgres_changes',change('DELETE'),handleVaultPayload)
-        .subscribe(status=>{
-            if(status==='SUBSCRIBED'){
-                updateSyncStatus('synced');
-                if(wasRealtimeDisconnected)fetchRemoteAll();
-                wasRealtimeDisconnected=false;
-            }else if(status==='CHANNEL_ERROR'||status==='TIMED_OUT'||status==='CLOSED'){
-                wasRealtimeDisconnected=true;
-                updateSyncStatus('reconnecting');
-            }
-        });
-}
-
-function bindSyncLifecycle(){
-    if(lifecycleBound)return;
-    lifecycleBound=true;
-
-    document.addEventListener('visibilitychange',()=>{
-        if(!syncReady)return;
-        if(document.visibilityState==='hidden'){
-            unsubscribeRealtime();
-        }else{
-            fetchRemoteAll();
-            subscribeRealtime();
-        }
-    });
-    window.addEventListener('focus',()=>{
-        if(syncReady&&document.visibilityState==='visible')fetchRemoteAll();
-    });
-    window.addEventListener('online',()=>{
-        if(!syncReady)return;
-        fetchRemoteAll();
-        subscribeRealtime();
-    });
-    window.addEventListener('pagehide',unsubscribeRealtime);
-    window.addEventListener('beforeunload',unsubscribeRealtime);
-    window.addEventListener('pageshow',()=>{
-        if(!syncReady)return;
-        fetchRemoteAll();
-        subscribeRealtime();
-    });
-}
-
-async function startSync(){
-    try{
-        ensureClient();
-        await ensureCodeHash();
-        if(!currentCodeHash)throw Object.assign(new Error('보관함 코드 해시가 준비되지 않았습니다.'),{code:'HASH'});
-    }catch(err){
-        reportSupabaseError(err,SAVES_TABLE,'connect');
-        return false;
-    }
-    bindSyncLifecycle();
-    applyCurrentUserToForm();
-    updateSyncStatus('connecting');
-    const ok=await fetchRemoteAll({
-        keepLocal:true,
-        createIfMissing:true
-    });
-    if(ok){
-        syncReady=true;
-        subscribeRealtime();
-        return true;
-    }
-    syncReady=false;
-    updateSyncStatus('idle');
-    return false;
-}
-
-async function submitAuth(){
-    const codeInput=document.getElementById('auth-code-input');
-    const nameInput=document.getElementById('auth-name-input');
-    const errorEl=document.getElementById('auth-error');
-    const code=(codeInput?.value||'').trim();
-    const name=(nameInput?.value||'').trim();
-    if(errorEl)errorEl.textContent='';
-
-    if(!isValidSyncCode(code)){
-        if(errorEl)errorEl.textContent='보관함 코드는 4글자 이상 영어 소문자 알파벳만 입력하세요.';
-        return;
-    }
-    if(!name){
-        if(errorEl)errorEl.textContent='사용자 이름을 입력해주세요.';
-        return;
-    }
-    if(!hasEnv()){
-        if(errorEl)errorEl.textContent='Supabase 연결 정보가 없습니다. .env와 env.js를 확인해주세요.';
-        return;
-    }
-
-    const submitBtn=document.getElementById('auth-submit-btn');
-    if(submitBtn)submitBtn.disabled=true;
-    const previousSession=readSessionKeys();
-    try{
-        currentSyncCode=code;
-        currentUser=name;
-        if(errorEl)errorEl.textContent='새 보관함을 준비하는 중…';
-        const ok=await startSync();
-        if(!ok){
-            await restoreSession(previousSession);
-            if(errorEl&&!errorEl.textContent)errorEl.textContent='보관함 연결에 실패했습니다. 이전 연결 정보는 그대로 둡니다.';
+            document.querySelector('header .title').innerHTML=`🧸 ${escapeHtml(data.appTitle||DEFAULT_TITLE)}`;
             return;
         }
-        if(pendingLegacyCopy){
-            if(errorEl)errorEl.textContent='이전 데이터를 새 보관함으로 복사하는 중…';
-            const result=await migrateLegacyToCurrentVault();
-            showMigrationResult(result);
-            if(!result.verified){
-                await restoreSession(previousSession);
-                syncReady=false;
-                unsubscribeRealtime();
-                if(errorEl)errorEl.textContent='가져오기에 실패했습니다. 이전 데이터와 이전 연결 정보는 그대로 둡니다.';
-                return;
-            }
-        }
-        persistSession();
-        hideAuth();
-        updateLegacySettingsCard();
-    }catch(err){
-        await restoreSession(previousSession);
-        reportSupabaseError(err,SAVES_TABLE,'connect',errorEl);
-    }finally{
-        if(submitBtn)submitBtn.disabled=false;
-    }
+    }catch(e){console.warn('불러오기 실패, 기본 데이터 사용:',e);}
+    managedSeries=SEED_SERIES.slice();
+    mockItems=cloneSeedItems().map(normalizeItem);
+    appSettings={showScrollTop:true};
 }
-
-function saveUserName(){
-    const name=(document.getElementById('sync-username-input')?.value||'').trim();
-    if(!name){
-        alert('사용자 이름을 입력해주세요.');
-        return;
-    }
-    currentUser=name;
-    localStorage.setItem(USER_KEY,name);
-    updateSyncStatus(syncReady?'synced':'idle');
-    alert('사용자 이름이 변경되었습니다. 이후 생성·수정하는 데이터부터 이 이름이 기록됩니다.');
-}
-
-async function switchVault(){
-    const code=(document.getElementById('switch-sync-code-input')?.value||'').trim();
-    const name=(document.getElementById('switch-username-input')?.value||currentUser||'').trim();
-    if(!isValidSyncCode(code)){
-        alert('보관함 코드는 4글자 이상 영어 소문자 알파벳만 입력하세요.');
-        return;
-    }
-    if(!name){
-        alert('사용자 이름을 입력해주세요.');
-        return;
-    }
-    unsubscribeRealtime();
-    currentSyncCode=code;
-    currentUser=name;
-    currentCodeHash='';
-    persistSession();
-    clearEmptyVault();
-    appSettings={showScrollTop:appSettings.showScrollTop!==false};
-    saveState();
-    renderAll();
-    applyCurrentUserToForm();
-    updateSyncStatus('connecting');
-    try{
-        await startSync();
-        document.getElementById('switch-sync-code-input').value='';
-        alert(`보관함 ${code}로 전환했습니다.`);
-    }catch(err){
-        reportSupabaseError(err,SAVES_TABLE,'switch');
-    }
-}
-
-function clearDeviceAuth(){
-    unsubscribeRealtime();
-    syncReady=false;
-    currentSyncCode='';
-    currentCodeHash='';
-    currentUser='';
-    localStorage.removeItem(USER_KEY);
-    localStorage.removeItem(SYNC_CODE_KEY);
-    localStorage.removeItem('gachive-device-unlocked');
-    updateSyncStatus('idle');
-    applyCurrentUserToForm();
-    showAuth();
-    const codeInput=document.getElementById('auth-code-input');
-    const nameInput=document.getElementById('auth-name-input');
-    if(codeInput)codeInput.value='';
-    if(nameInput)nameInput.value='';
-}
-
 
 function getTransactions(){
     const tx=[];
@@ -2150,8 +952,8 @@ function switchTab(tabId,el){
     document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
     document.getElementById('tab-'+tabId).classList.add('active');
     el.classList.add('active');
-    closeSheet();
-    if(tabId==='stats')setTimeout(renderStats,0);
+    closeSheet(true);
+    if(tabId==='stats')setTimeout(renderTotalStats,0);
 }
 function switchStatsTab(tab,el){
     const container=document.getElementById('tab-stats');
@@ -2228,11 +1030,62 @@ function openDateSheet(dateStr){
     });
     if(!dayTx.length)html+='<p style="color:#9089AC;text-align:center;padding:20px 0;">기록된 내역이 없습니다.</p>';
     html+='</ul>';
-    html+=`<button onclick="goToAddItem('${dateStr}')" style="width:100%;margin-top:14px;">+ 이 날짜로 아이템 추가</button>`;
+    html+=`<button onclick="goToAddItem('${dateStr}')" style="width:100%;margin-top:14px;">+ 이 날짜로 뽑기 등록</button>`;
     openSheet(html);
 }
-function openSheet(html){document.getElementById('sheet-content').innerHTML=html;document.getElementById('bottom-sheet').classList.add('open');document.getElementById('sheet-overlay').classList.add('open');document.body.style.overflow='hidden';}
-function closeSheet(){document.getElementById('bottom-sheet').classList.remove('open');document.getElementById('sheet-overlay').classList.remove('open');document.body.style.overflow='';}
+
+let sheetStack=[];
+let currentSheetRestore=null;
+let currentSheetKind=null;
+
+function isSheetOpen(){
+    return document.getElementById('bottom-sheet').classList.contains('open');
+}
+
+function openSheet(html, opts={}){
+    const replace=!!opts.replace;
+    const restore=opts.restore||null;
+
+    if(isSheetOpen() && !replace){
+        sheetStack.push({
+            title:document.getElementById('sheet-title').innerText,
+            html:document.getElementById('sheet-content').innerHTML,
+            restore:currentSheetRestore,
+            kind:currentSheetKind
+        });
+    }else if(!isSheetOpen()){
+        sheetStack=[];
+    }
+
+    if(opts.title!=null)document.getElementById('sheet-title').innerText=opts.title;
+    currentSheetRestore=restore;
+    currentSheetKind=opts.kind||null;
+    document.getElementById('sheet-content').innerHTML=html;
+    document.getElementById('bottom-sheet').classList.add('open');
+    document.getElementById('sheet-overlay').classList.add('open');
+    document.body.style.overflow='hidden';
+}
+
+function closeSheet(force){
+    if(!force && sheetStack.length){
+        const prev=sheetStack.pop();
+        if(typeof prev.restore==='function'){
+            prev.restore();
+            return;
+        }
+        currentSheetRestore=null;
+        currentSheetKind=prev.kind||null;
+        document.getElementById('sheet-title').innerText=prev.title;
+        document.getElementById('sheet-content').innerHTML=prev.html;
+        return;
+    }
+    sheetStack=[];
+    currentSheetRestore=null;
+    currentSheetKind=null;
+    document.getElementById('bottom-sheet').classList.remove('open');
+    document.getElementById('sheet-overlay').classList.remove('open');
+    document.body.style.overflow='';
+}
 
 
 
@@ -2378,9 +1231,11 @@ function renderStatsMonthOptions(){
 
     const months=availableMonths.length?availableMonths:[currentMonth];
 
-    monthSelect.innerHTML=months.map(mon=>`<option value="${mon}">${Number(mon)}월</option>`).join('');
+    monthSelect.innerHTML=
+        '<option value="all">전체</option>'+
+        months.map(mon=>`<option value="${mon}">${Number(mon)}월</option>`).join('');
 
-    if(previous&&months.includes(previous)){
+    if(previous==='all'||months.includes(previous)){
         monthSelect.value=previous;
     }else if(year===currentYear&&months.includes(currentMonth)){
         monthSelect.value=currentMonth;
@@ -2392,46 +1247,8 @@ function renderStatsMonthOptions(){
 function getSelectedStatsMonth(){
     const year=document.getElementById('stats-year-filter')?.value||localTodayString().slice(0,4);
     const mon=document.getElementById('stats-month-filter')?.value||localTodayString().slice(5,7);
-    return `${year}-${mon}`;
+    return mon==='all'?year:`${year}-${mon}`;
 }
-
-function renderStatsSeriesExpense(){
-    const container=document.getElementById('stats-series-expense-list');
-    if(!container)return;
-
-    const month=getSelectedStatsMonth();
-    const grouped={};
-
-    // 지출 통계이므로 배송비도 포함
-    getTransactions()
-        .filter(t=>t.type==='expense'&&t.date.startsWith(month))
-        .forEach(t=>{
-            const series=t.category||'미분류';
-            grouped[series]=(grouped[series]||0)+Number(t.amount||0);
-        });
-
-    const rows=Object.entries(grouped).sort((a,b)=>b[1]-a[1]);
-    const total=rows.reduce((sum,[,amount])=>sum+amount,0);
-
-    if(!rows.length){
-        container.innerHTML='<p class="muted" style="text-align:center;padding:12px 0;margin:0;">해당 월의 지출 내역이 없습니다.</p>';
-        return;
-    }
-
-    container.innerHTML=rows.map(([series,amount])=>{
-        const pct=total?Math.round(amount/total*100):0;
-        return `<div style="padding:9px 0;border-bottom:1px dashed var(--line);">
-            <div class="flex-between" style="gap:10px;">
-                <span style="font-size:13px;font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">📁 ${escapeHtml(series)}</span>
-                <span class="mono" style="font-size:13px;font-weight:700;color:var(--coin-red);flex:none;">${won(amount)}</span>
-            </div>
-            <div style="margin-top:5px;background:#EEEAF8;border-radius:999px;height:6px;overflow:hidden;">
-                <div style="width:${pct}%;height:100%;background:var(--coin-red);"></div>
-            </div>
-        </div>`;
-    }).join('');
-}
-
 
 function setLedgerTypeFilter(type,el){
     ledgerTypeFilter=type;
@@ -2498,11 +1315,11 @@ function toggleNewItemForm(){
 }
 
 function goToAddItem(dateStr){
-    closeSheet();
+    closeSheet(true);
     document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
     document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
-    document.getElementById('tab-plant').classList.add('active');
-    document.querySelectorAll('.bottom-nav .nav-item')[2].classList.add('active');
+    document.getElementById('tab-ledger').classList.add('active');
+    document.querySelectorAll('.bottom-nav .nav-item')[1].classList.add('active');
     const body=document.getElementById('new-item-accordion-body');
     if(!body.classList.contains('open'))toggleNewItemForm();
     if(dateStr)document.getElementById('new-acquired').value=dateStr;
@@ -2568,7 +1385,7 @@ function resetCollectionFilter(){
 }
 
 
-function openItemDetail(id){
+function openItemDetail(id, opts={}){
     const p=mockItems.find(x=>x.id===id);if(!p)return;
     syncItemSaleState(p);
 
@@ -2576,7 +1393,6 @@ function openItemDetail(id){
     const soldQty=getSoldQuantity(p);
     const sales=Array.isArray(p.sales)?p.sales:[];
 
-    document.getElementById('sheet-title').innerText='컬렉션 상세';
 
     const recentSales=sales.slice().sort((a,b)=>String(b.date).localeCompare(String(a.date))).slice(0,3);
     const recentHtml=recentSales.length?`
@@ -2617,14 +1433,18 @@ function openItemDetail(id){
             <button class="secondary" onclick="openItemEditor(${p.id})">수정</button>
             ${stock>0?`<button onclick="openSaleForm(${p.id})" style="background:var(--coin-teal);">판매</button>`:''}
         </div>`;
-    openSheet(html);
+    openSheet(html, {
+        title:'컬렉션 상세',
+        replace:!!opts.replace,
+        kind:'item',
+        restore:()=>openItemDetail(id, {replace:true})
+    });
 }
 
 function openItemEditor(id){
     const p=mockItems.find(x=>x.id===id);if(!p)return;
     syncItemSaleState(p);
 
-    document.getElementById('sheet-title').innerText='컬렉션 수정';
     const seriesOptions=managedSeries.map(v=>`<option ${v===p.series?'selected':''}>${escapeHtml(v)}</option>`).join('');
     const soldQty=getSoldQuantity(p);
 
@@ -2655,12 +1475,12 @@ function openItemEditor(id){
         <div style="margin-top:18px;padding-top:14px;border-top:1px dashed var(--line);">
             <button class="danger" onclick="deleteCollectionItem(${p.id})" style="width:100%;">삭제</button>
         </div>`;
-    openSheet(html);
+    openSheet(html, {title:'컬렉션 수정'});
 }
 
 function toggleEditSaleFields(){const sold=document.getElementById('edit-status').value==='sold';document.getElementById('edit-sale-fields').style.display=sold?'flex':'none';}
 
-function openSaleForm(id){
+function openSaleForm(id, opts={}){
     const p=mockItems.find(x=>x.id===id);if(!p)return;
     syncItemSaleState(p);
 
@@ -2669,11 +1489,10 @@ function openSaleForm(id){
 
     if(stock<=0){
         alert('현재 보유 수량이 없습니다.');
-        openItemDetail(id);
+        openItemDetail(id, {replace:true});
         return;
     }
 
-    document.getElementById('sheet-title').innerText='판매 등록';
 
     const history=sales.slice().sort((a,b)=>String(b.date).localeCompare(String(a.date))).map(s=>`
         <li class="item-row">
@@ -2709,11 +1528,15 @@ function openSaleForm(id){
             <ul class="item-list">${history}</ul>
         </div>`:''}
 
-        <button class="secondary" onclick="openItemDetail(${p.id})" style="width:100%;margin-top:12px;">상세로 돌아가기</button>`;
-    openSheet(html);
+        <button class="secondary" onclick="closeSheet()" style="width:100%;margin-top:12px;">상세로 돌아가기</button>`;
+    openSheet(html, {
+        title:'판매 등록',
+        replace:!!opts.replace,
+        restore:()=>openSaleForm(id, {replace:true})
+    });
 }
 
-async function saveCollectionItem(id){
+function saveCollectionItem(id){
     const p=mockItems.find(x=>x.id===id);if(!p)return;
 
     const newQuantity=Math.max(1,Math.floor(Number(document.getElementById('edit-quantity').value||1)));
@@ -2723,24 +1546,20 @@ async function saveCollectionItem(id){
         return;
     }
 
-    const next={
-        name:document.getElementById('edit-name').value.trim()||p.name,
-        series:document.getElementById('edit-series').value,
-        quantity:newQuantity,
-        acquired:document.getElementById('edit-acquired').value,
-        purchasePrice:Number(document.getElementById('edit-purchase-price').value||0),
-        location:document.getElementById('edit-location').value.trim(),
-        note:document.getElementById('edit-note').value.trim(),
-        fav:document.getElementById('edit-fav').checked
-    };
+    p.name=document.getElementById('edit-name').value.trim()||p.name;
+    p.series=document.getElementById('edit-series').value;
+    p.quantity=newQuantity;
+    p.acquired=document.getElementById('edit-acquired').value;
+    p.purchasePrice=Number(document.getElementById('edit-purchase-price').value||0);
+    p.location=document.getElementById('edit-location').value.trim();
+    p.note=document.getElementById('edit-note').value.trim();
+    p.fav=document.getElementById('edit-fav').checked;
+    syncItemSaleState(p);
 
-    await commitChange(draft=>{
-        const item=draft.mockItems.find(x=>Number(x.id)===Number(id));
-        if(!item)return;
-        Object.assign(item,next);
-        stampUpdate(item);
-        syncItemSaleState(item);
-    },()=>{closeSheet();renderAll();openItemDetail(id);});
+    saveState();
+    renderAll();
+    if(sheetStack.length)sheetStack.pop();
+    openItemDetail(id, {replace:true});
 }
 
 function applyEditorFieldsBeforeSale(p){
@@ -2781,7 +1600,7 @@ function toggleSaleForm(){
     }
 }
 
-async function registerSale(id){
+function registerSale(id){
     const p=mockItems.find(x=>x.id===id);if(!p)return;
 
     const date=document.getElementById('sale-date')?.value||'';
@@ -2795,49 +1614,51 @@ async function registerSale(id){
     if(qty>stock){alert(`현재 보유 수량은 ${stock}개입니다. ${stock}개 이하로 입력해주세요.`);return;}
     if(amount<0){alert('판매금액은 0원 이상으로 입력해주세요.');return;}
 
-    const sale={
+    if(!Array.isArray(p.sales))p.sales=[];
+    p.sales.push({
         id:Date.now()+Math.floor(Math.random()*1000),
         date,
         quantity:qty,
         amount,
         note
-    };
+    });
+    syncItemSaleState(p);
 
-    await commitChange(draft=>{
-        const item=draft.mockItems.find(x=>Number(x.id)===Number(id));
-        if(!item)return;
-        if(!Array.isArray(item.sales))item.sales=[];
-        item.sales.push(sale);
-        stampUpdate(item);
-        syncItemSaleState(item);
-    },()=>{renderAll();closeSheet();openItemDetail(id);});
+    saveState();
+    renderAll();
+    if(sheetStack.length)sheetStack.pop();
+    openItemDetail(id, {replace:true});
 }
 
-async function deleteSale(itemId,saleId){
+function deleteSale(itemId,saleId){
     const p=mockItems.find(x=>x.id===itemId);if(!p)return;
     if(!confirm('이 판매 이력을 삭제할까요? 보유 수량이 다시 복구됩니다.'))return;
 
-    await commitChange(draft=>{
-        const item=draft.mockItems.find(x=>Number(x.id)===Number(itemId));
-        if(!item)return;
-        item.sales=(Array.isArray(item.sales)?item.sales:[]).filter(sale=>Number(sale.id)!==Number(saleId));
-        stampUpdate(item);
-        syncItemSaleState(item);
-    },()=>{renderAll();closeSheet();openSaleForm(itemId);});
+    p.sales=(Array.isArray(p.sales)?p.sales:[]).filter(sale=>Number(sale.id)!==Number(saleId));
+    syncItemSaleState(p);
+    saveState();
+    renderAll();
+    openSaleForm(itemId, {replace:true});
 }
 
-async function deleteCollectionItem(id){
+function deleteCollectionItem(id){
     if(!confirm('이 아이템을 삭제할까요?'))return;
-    await commitChange(draft=>{
-        draft.mockItems=draft.mockItems.filter(x=>Number(x.id)!==Number(id));
-    },()=>{closeSheet();renderAll();});
+    const item=mockItems.find(x=>x.id===id);
+    const series=item?.series;
+    const returnToHoldings=currentSheetKind==='holdings'||sheetStack.some(s=>s.kind==='holdings');
+    mockItems=mockItems.filter(x=>x.id!==id);
+    saveState();
+    closeSheet(true);
+    renderAll();
+    if(returnToHoldings && series)openHoldingsSheet(series);
 }
-async function addCollectionItem(){
+function addCollectionItem(){
     const name=document.getElementById('new-name').value.trim();
     if(!name){alert('아이템 이름을 입력해주세요.');return;}
 
     const quantity=Math.max(1,Math.floor(Number(document.getElementById('new-quantity')?.value||1)));
-    const item=normalizeItem({
+
+    mockItems.unshift(normalizeItem({
         id:Date.now(),
         name,
         series:document.getElementById('new-series').value,
@@ -2848,20 +1669,20 @@ async function addCollectionItem(){
         note:document.getElementById('new-note').value.trim(),
         fav:document.getElementById('new-fav').checked,
         sales:[]
-    });
-    stampCreate(item);
-
-    const saved=await commitChange(draft=>{
-        draft.mockItems.unshift(item);
-    });
-    if(!saved)return;
+    }));
 
     ['new-name','new-purchase-price','new-location','new-note'].forEach(id=>document.getElementById(id).value='');
     document.getElementById('new-quantity').value='1';
     document.getElementById('new-fav').checked=false;
-    toggleNewItemForm();
+    saveState();renderAll();toggleNewItemForm();
 }
 
+
+function netColor(amount){
+    if(amount>0)return 'var(--coin-red)';
+    if(amount<0)return 'var(--coin-teal)';
+    return 'var(--ink)';
+}
 
 function renderTotalStats(){
     const visibleItems=mockItems.filter(item=>!isHiddenItem(item));
@@ -2869,6 +1690,7 @@ function renderTotalStats(){
 
     const totalExpense=visibleTx.filter(t=>t.type==='expense').reduce((sum,t)=>sum+Number(t.amount||0),0);
     const totalIncome=visibleTx.filter(t=>t.type==='income').reduce((sum,t)=>sum+Number(t.amount||0),0);
+    const totalNet=totalExpense-totalIncome;
 
     const pullItems=visibleItems.filter(item=>!isExpenseOnlySeries(item.series));
     const totalPulls=pullItems.reduce((sum,item)=>sum+Number(item.quantity||1),0);
@@ -2878,58 +1700,49 @@ function renderTotalStats(){
     document.getElementById('total-stat-avg-spend').innerText=won(totalPulls?Math.round(pullSpend/totalPulls):0);
     document.getElementById('total-stat-expense').innerText=won(totalExpense);
     document.getElementById('total-stat-income').innerText=won(totalIncome);
-    document.getElementById('total-stat-net').innerText=won(totalExpense-totalIncome);
 
-    const expenseBySeries={};
-    visibleTx.filter(t=>t.type==='expense').forEach(t=>{
+    const netEl=document.getElementById('total-stat-net');
+    netEl.innerText=won(totalNet);
+    netEl.style.color=netColor(totalNet);
+
+    const bySeries={};
+    visibleTx.forEach(t=>{
         const series=t.category||'미분류';
-        expenseBySeries[series]=(expenseBySeries[series]||0)+Number(t.amount||0);
+        if(!bySeries[series])bySeries[series]={expense:0,income:0};
+        const amount=Number(t.amount||0);
+        if(t.type==='expense')bySeries[series].expense+=amount;
+        else if(t.type==='income')bySeries[series].income+=amount;
     });
 
-    const expenseRows=Object.entries(expenseBySeries).sort((a,b)=>b[1]-a[1]);
-    const expenseTotal=expenseRows.reduce((sum,[,amount])=>sum+amount,0);
-    const expenseContainer=document.getElementById('total-series-expense-list');
+    const netRows=Object.entries(bySeries)
+        .map(([series,v])=>({
+            series,
+            expense:v.expense,
+            income:v.income,
+            net:v.expense-v.income
+        }))
+        .sort((a,b)=>b.net-a.net||a.series.localeCompare(b.series,'ko'));
 
-    expenseContainer.innerHTML=expenseRows.length
-        ? expenseRows.map(([series,amount])=>{
-            const pct=expenseTotal?Math.round(amount/expenseTotal*100):0;
-            return `<div style="padding:9px 0;border-bottom:1px dashed var(--line);">
+    const netContainer=document.getElementById('total-series-net-list');
+    netContainer.innerHTML=netRows.length
+        ? netRows.map(row=>{
+            const buy=Math.max(0,row.expense);
+            const sell=Math.max(0,row.income);
+            const stack=buy+sell>0
+                ? `${buy>0?`<div class="series-stack-fill exp" style="flex:${buy} 1 0"></div>`:''}${sell>0?`<div class="series-stack-fill inc" style="flex:${sell} 1 0"></div>`:''}`
+                : '';
+            return `<div class="series-net-row">
                 <div class="flex-between" style="gap:10px;">
-                    <span style="font-size:13px;font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">📁 ${escapeHtml(series)}</span>
-                    <span class="mono" style="font-size:13px;font-weight:700;color:var(--coin-red);flex:none;">${won(amount)}</span>
+                    <div style="min-width:0;">
+                        <div style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">📁 ${escapeHtml(row.series)}</div>
+                        <div class="muted" style="margin-top:3px;">구매 ${won(row.expense)} · 판매 ${won(row.income)}</div>
+                    </div>
+                    <span class="mono" style="font-size:13px;font-weight:700;color:var(--ink);flex:none;">${won(row.net)}</span>
                 </div>
-                <div style="margin-top:5px;background:#EEEAF8;border-radius:999px;height:6px;overflow:hidden;">
-                    <div style="width:${pct}%;height:100%;background:var(--coin-red);"></div>
-                </div>
+                <div class="series-stack">${stack}</div>
             </div>`;
         }).join('')
-        : '<p class="muted" style="text-align:center;padding:12px 0;margin:0;">지출 내역이 없습니다.</p>';
-
-    const collectionItems=visibleItems.filter(item=>!isExpenseOnlySeries(item.series));
-    const grouped={};
-    collectionItems.forEach(item=>{
-        const series=item.series||'미분류';
-        if(!grouped[series])grouped[series]={registered:0,stock:0,sold:0};
-        grouped[series].registered+=Number(item.quantity||1);
-        grouped[series].stock+=getStockQuantity(item);
-        grouped[series].sold+=getSoldQuantity(item);
-    });
-
-    const collectionRows=Object.entries(grouped)
-        .sort((a,b)=>b[1].stock-a[1].stock || a[0].localeCompare(b[0],'ko'));
-
-    const collectionContainer=document.getElementById('total-series-collection-list');
-    collectionContainer.innerHTML=collectionRows.length
-        ? collectionRows.map(([series,count])=>`
-            <div class="item-row">
-                <div>
-                    <b>📁 ${escapeHtml(series)}</b>
-                    <div class="muted" style="margin-top:4px;">현재 보유 ${count.stock}개 · 판매 ${count.sold}개 · 등록 ${count.registered}개</div>
-                </div>
-                <div class="mono" style="font-weight:700;">${count.stock}개</div>
-            </div>
-        `).join('')
-        : '<p class="muted" style="text-align:center;padding:12px 0;margin:0;">컬렉션 데이터가 없습니다.</p>';
+        : '<p class="muted" style="text-align:center;padding:12px 0;margin:0;">순지출 내역이 없습니다.</p>';
 }
 
 
@@ -2973,14 +1786,22 @@ function renderSaleStatsMonthOptions(){
     const currentMonth=localTodayString().slice(5,7);
     if(!months.length)months=[currentMonth];
 
-    monthSelect.innerHTML=months.map(mon=>`<option value="${mon}">${Number(mon)}월</option>`).join('');
-    monthSelect.value=previous&&months.includes(previous)?previous:months[0];
+    monthSelect.innerHTML=
+        '<option value="all">전체</option>'+
+        months.map(mon=>`<option value="${mon}">${Number(mon)}월</option>`).join('');
+    monthSelect.value=previous==='all'||months.includes(previous)?previous:months[0];
 }
 
 function getSelectedSaleStatsMonth(){
     const year=document.getElementById('sale-stats-year-filter')?.value||localTodayString().slice(0,4);
     const mon=document.getElementById('sale-stats-month-filter')?.value||localTodayString().slice(5,7);
-    return `${year}-${mon}`;
+    return mon==='all'?year:`${year}-${mon}`;
+}
+
+function statsPeriodHint(period){
+    if(/^\d{4}$/.test(period))return `${period}년 전체`;
+    const mon=period.slice(5,7);
+    return `${Number(mon)}월 기준`;
 }
 
 function renderSaleStats(){
@@ -3000,42 +1821,24 @@ function renderSaleStats(){
         const series=t.category||'미분류';
         bySeries[series]=(bySeries[series]||0)+Number(t.amount||0);
     });
-
     const rows=Object.entries(bySeries).sort((a,b)=>b[1]-a[1]);
     const list=document.getElementById('sale-stats-series-list');
-    list.innerHTML=rows.length
-        ? rows.map(([series,amount])=>`
-            <div class="item-row">
-                <b>📁 ${escapeHtml(series)}</b>
-                <span class="mono" style="color:var(--coin-teal);font-weight:700;">${won(amount)}</span>
-            </div>`).join('')
-        : '<p class="muted" style="text-align:center;padding:14px 0;">해당 월의 판매 내역이 없습니다.</p>';
-
-    const canvas=document.getElementById('salePieChart');
-    const fallback=document.getElementById('sale-chart-fallback');
-    if(canvas&&typeof Chart!=='undefined'&&rows.length){
-        fallback.style.display='none';
-        if(salePieChart)salePieChart.destroy();
-        salePieChart=new Chart(canvas.getContext('2d'),{
-            type:'pie',
-            data:{
-                labels:rows.map(([series])=>series),
-                datasets:[{
-                    data:rows.map(([,amount])=>amount),
-                    backgroundColor:['#22C3A6','#4FA6E8','#FFB627','#A67AE0','#FF4F64','#8A84A8']
-                }]
-            },
-            options:{plugins:{legend:{position:'bottom'}}}
-        });
-    }else{
-        if(salePieChart){salePieChart.destroy();salePieChart=null;}
-        if(fallback)fallback.style.display=rows.length?'none':'block';
+    if(list){
+        list.innerHTML=rows.length
+            ? rows.map(([series,amount])=>`
+                <div class="item-row">
+                    <b>📁 ${escapeHtml(series)}</b>
+                    <span class="mono" style="font-weight:700;">${won(amount)}</span>
+                </div>`).join('')
+            : '<p class="muted" style="text-align:center;padding:14px 0;margin:0;">해당 기간의 판매 내역이 없습니다.</p>';
     }
+
+    const saleHint=document.getElementById('sale-stats-period-hint');
+    if(saleHint)saleHint.textContent=statsPeriodHint(month);
 }
 
 function renderStats(){
     const month=getSelectedStatsMonth();
-    renderStatsSeriesExpense();
 
     const monthItems=mockItems.filter(p=>
         !isHiddenItem(p) &&
@@ -3053,30 +1856,27 @@ function renderStats(){
     document.getElementById('stat-total-purchase').innerText=won(totalPurchaseAmount);
     document.getElementById('stat-avg-spend').innerText=won(totalPurchases?Math.round(itemSpend/totalPurchases):0);
 
-    const expByCat={};
+    const grouped={};
     getTransactions()
         .filter(t=>t.type==='expense'&&t.date.startsWith(month))
-        .forEach(t=>expByCat[t.category]=(expByCat[t.category]||0)+t.amount);
-
-    const canvas=document.getElementById('expensePieChart');
-    const fallback=document.getElementById('expense-chart-fallback');
-    if(canvas&&typeof Chart!=='undefined'){
-        fallback.style.display='none';
-        if(expensePieChart)expensePieChart.destroy();
-        expensePieChart=new Chart(canvas.getContext('2d'),{
-            type:'pie',
-            data:{
-                labels:Object.keys(expByCat),
-                datasets:[{
-                    data:Object.values(expByCat),
-                    backgroundColor:['#FF4F64','#4FA6E8','#FFB627','#A67AE0','#22C3A6','#8A84A8']
-                }]
-            },
-            options:{plugins:{legend:{position:'bottom'}}}
+        .forEach(t=>{
+            const series=t.category||'미분류';
+            grouped[series]=(grouped[series]||0)+Number(t.amount||0);
         });
-    }else if(fallback){
-        fallback.style.display='block';
+    const expenseRows=Object.entries(grouped).sort((a,b)=>b[1]-a[1]);
+    const expenseList=document.getElementById('stats-series-expense-list');
+    if(expenseList){
+        expenseList.innerHTML=expenseRows.length
+            ? expenseRows.map(([series,amount])=>`
+                <div class="item-row">
+                    <b>📁 ${escapeHtml(series)}</b>
+                    <span class="mono" style="font-weight:700;">${won(amount)}</span>
+                </div>`).join('')
+            : '<p class="muted" style="text-align:center;padding:14px 0;margin:0;">해당 기간의 구매 내역이 없습니다.</p>';
     }
+
+    const expenseHint=document.getElementById('stats-period-hint');
+    if(expenseHint)expenseHint.textContent=statsPeriodHint(month);
 
     const visibleItems=mockItems.filter(p=>!isHiddenItem(p)&&!isExpenseOnlySeries(p.series));
     const groupSeriesList=[...new Set(visibleItems.map(p=>p.series).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ko'));
@@ -3090,12 +1890,72 @@ function renderStats(){
                 const sold=getSoldQuantity(p);
                 return `🧸 ${escapeHtml(p.name)} ×${stock}${stock===0?' (판매완료)':sold?` (판매 ${sold})`:''}`;
             }).join(', ');
-            return `<div style="margin-bottom:12px;background:#fff;padding:14px;border-radius:12px;box-shadow:var(--shadow);">
-                <b>📁 ${escapeHtml(s)} (현재 보유 ${stockTotal}개)</b>
+            const encoded=encodeURIComponent(s);
+            return `<div class="collection-card" style="margin-bottom:12px;background:#fff;padding:14px;border-radius:12px;box-shadow:var(--shadow);border:1px solid var(--line);" onclick="openHoldingsSheet(decodeURIComponent('${encoded}'))">
+                <div class="flex-between" style="gap:8px;">
+                    <b>📁 ${escapeHtml(s)} (현재 보유 ${stockTotal}개)</b>
+                    <span class="muted">›</span>
+                </div>
                 <div style="color:var(--ink-soft2);font-size:13px;margin-top:6px;line-height:1.6;">${itemLabels}</div>
             </div>`;
         }).join('')
-        : '<p class="muted" style="text-align:center;padding:20px 0;">등록된 컬렉션이 없습니다.</p>';
+        : '<p class="muted" style="text-align:center;padding:20px 0;">보유 중인 아이템이 없습니다.</p>';
+}
+
+function openHoldingsSheet(series, opts={}){
+    const items=mockItems.filter(p=>!isHiddenItem(p)&&!isExpenseOnlySeries(p.series)&&p.series===series);
+    items.forEach(syncItemSaleState);
+    const stockTotal=items.reduce((sum,p)=>sum+getStockQuantity(p),0);
+
+    const rows=items.map(p=>{
+        const stock=getStockQuantity(p);
+        const sold=getSoldQuantity(p);
+        return `<div class="item-row" style="cursor:pointer;" onclick="openItemDetail(${p.id})">
+            <div>
+                <b>🧸 ${escapeHtml(p.name)}</b>
+                <div class="muted" style="margin-top:3px;">보유 ${stock}개${sold?` · 판매 ${sold}개`:''}${stock===0?' · 판매완료':''}</div>
+            </div>
+            <span class="muted">›</span>
+        </div>`;
+    }).join('');
+
+    const encoded=encodeURIComponent(series);
+    openSheet(`
+        <div class="stat-pill" style="margin-bottom:12px;">
+            <span>📦 현재 보유</span>
+            <span class="num">${stockTotal}개</span>
+        </div>
+        ${rows||'<p class="muted" style="text-align:center;padding:12px 0;">아이템이 없습니다.</p>'}
+        <button style="width:100%;margin-top:16px;" onclick="goToCollectionSeries(decodeURIComponent('${encoded}'))">컬렉션에서 이 시리즈 보기</button>
+    `, {
+        title:series||'시리즈 보유',
+        replace:!!opts.replace,
+        kind:'holdings',
+        restore:()=>openHoldingsSheet(series, {replace:true})
+    });
+}
+
+function goToCollectionSeries(series){
+    const plantNav=document.querySelectorAll('.bottom-nav .nav-item')[2];
+    if(plantNav)switchTab('plant', plantNav);
+
+    const search=document.getElementById('collection-search');
+    const status=document.getElementById('collection-status-filter');
+    const filter=document.getElementById('collection-series-filter');
+    if(search)search.value='';
+    if(status)status.value='';
+    if(filter){
+        const hasOption=[...filter.options].some(opt=>opt.value===series);
+        if(!hasOption && series){
+            const opt=document.createElement('option');
+            opt.value=series;
+            opt.textContent=series;
+            filter.appendChild(opt);
+        }
+        filter.value=series;
+    }
+    renderCollection();
+    window.scrollTo({top:0, behavior:'smooth'});
 }
 
 function renderSeriesControls(){
@@ -3123,24 +1983,20 @@ function renderSeriesManager(){
     }).join('');
 }
 
-async function addSeries(){
+function addSeries(){
     const input=document.getElementById('series-name-input');
     const name=(input?.value||'').trim();
     if(!name){alert('시리즈명을 입력해주세요.');return;}
     if(managedSeries.includes(name)){alert('이미 등록된 시리즈입니다.');return;}
 
-    const record=stampCreate(normalizeSeriesRecord({id:Date.now(),name}));
-    const saved=await commitChange(draft=>{
-        draft.managedSeries.push(name);
-        draft.seriesRecords.push(record);
-    },()=>{
-        renderSeriesControls();
-        renderSeriesManager();
-    });
-    if(saved)input.value='';
+    managedSeries.push(name);
+    input.value='';
+    saveState();
+    renderSeriesControls();
+    renderSeriesManager();
 }
 
-async function editSeries(index){
+function editSeries(index){
     const oldName=managedSeries[index];
     if(!oldName)return;
 
@@ -3152,23 +2008,19 @@ async function editSeries(index){
         return;
     }
 
-    const saved=await commitChange(draft=>{
-        draft.managedSeries[index]=newName;
-        const record=draft.seriesRecords.find(item=>item.name===oldName)||normalizeSeriesRecord({id:Date.now(),name:oldName});
-        record.name=newName;
-        stampUpdate(record);
-        if(!draft.seriesRecords.some(item=>Number(item.id)===Number(record.id)))draft.seriesRecords.push(record);
-        draft.mockItems.forEach(item=>{
-            if(item.series===oldName){
-                item.series=newName;
-                stampUpdate(item);
-            }
-        });
+    managedSeries[index]=newName;
+
+    // 해당 시리즈를 쓰고 있던 컬렉션도 함께 변경
+    mockItems.forEach(item=>{
+        if(item.series===oldName)item.series=newName;
     });
-    if(saved)alert(`'${oldName}' → '${newName}'으로 수정했습니다.`);
+
+    saveState();
+    renderAll();
+    alert(`'${oldName}' → '${newName}'으로 수정했습니다.`);
 }
 
-async function deleteSeries(index){
+function deleteSeries(index){
     const name=managedSeries[index];
     if(!name)return;
 
@@ -3179,23 +2031,15 @@ async function deleteSeries(index){
 
     if(!confirm(`'${name}' 시리즈를 삭제할까요?`))return;
 
-    await commitChange(draft=>{
-        draft.managedSeries.splice(index,1);
-        draft.seriesRecords=draft.seriesRecords.filter(item=>item.name!==name);
-    },()=>{
-        renderSeriesControls();
-        renderSeriesManager();
-    });
+    managedSeries.splice(index,1);
+    saveState();
+    renderSeriesControls();
+    renderSeriesManager();
 }
-async function setScrollTopEnabled(enabled){
-    await commitChange(draft=>{
-        draft.appSettings.showScrollTop=Boolean(enabled);
-        stampUpdate(draft.appSettings);
-        if(!draft.appSettings.created_at){
-            draft.appSettings.created_by=currentUser;
-            draft.appSettings.created_at=draft.appSettings.updated_at;
-        }
-    },()=>updateScrollTopButton());
+function setScrollTopEnabled(enabled){
+    appSettings.showScrollTop=Boolean(enabled);
+    saveState();
+    updateScrollTopButton();
 }
 
 function updateScrollTopButton(){
@@ -3213,19 +2057,7 @@ function scrollToPageTop(){
 
 window.addEventListener('scroll',updateScrollTopButton,{passive:true});
 
-async function changeAppTitle(){
-    const title=document.getElementById('app-title-input').value.trim();
-    if(!title)return;
-    const saved=await commitChange(draft=>{
-        draft.appTitle=title;
-        stampUpdate(draft.appSettings);
-        if(!draft.appSettings.created_at){
-            draft.appSettings.created_by=currentUser;
-            draft.appSettings.created_at=draft.appSettings.updated_at;
-        }
-    });
-    if(saved)alert('앱 이름이 저장되었습니다.');
-}
+function changeAppTitle(){const title=document.getElementById('app-title-input').value.trim();if(title){document.querySelector('header .title').innerHTML=`🧸 ${escapeHtml(title)}`;saveState();alert('앱 이름이 저장되었습니다.');}}
 
 async function exportExcel(){
     if(typeof ExcelJS==='undefined'){
@@ -3286,7 +2118,8 @@ async function exportExcel(){
                 itemName:p.name,
                 date:sale.date,
                 quantity:Number(sale.quantity||1),
-                amount:Number(sale.amount||0)
+                amount:Number(sale.amount||0),
+                note:sale.note||''
             }));
         });
 
@@ -3300,6 +2133,7 @@ async function exportExcel(){
             {header:'값',key:'value',width:28}
         ];
         settingsSheet.addRow({item:'앱 이름',value:getAppTitle()});
+        settingsSheet.addRow({item:'안내',value:'아이템ID는 판매이력과 연결되므로 삭제하지 마세요.'});
 
         [collectionSheet,salesSheet,seriesSheet,settingsSheet].forEach(ws=>{
             ws.getRow(1).font={bold:true,color:{argb:'FFFFFFFF'}};
@@ -3309,16 +2143,16 @@ async function exportExcel(){
             ws.views=[{state:'frozen',ySplit:1}];
         });
 
-        collectionSheet.getColumn('id').hidden=true;
-        salesSheet.getColumn('itemId').hidden=true;
         collectionSheet.getColumn('purchasePrice').numFmt='#,##0';
         collectionSheet.getColumn('saleTotal').numFmt='#,##0';
         salesSheet.getColumn('amount').numFmt='#,##0';
         collectionSheet.getColumn('note').alignment={wrapText:true,vertical:'top'};
+        salesSheet.getColumn('note').alignment={wrapText:true,vertical:'top'};
 
         const seriesEndRow=Math.max(2,managedSeries.length+1);
         const seriesFormula=`'시리즈'!$A$2:$A$${seriesEndRow}`;
-        for(let row=2;row<=1001;row++){
+        const validationEnd=Math.max(mockItems.length+51,52);
+        for(let row=2;row<=validationEnd;row++){
             collectionSheet.getCell(`C${row}`).dataValidation={
                 type:'list',
                 allowBlank:true,
@@ -3350,11 +2184,58 @@ async function exportExcel(){
 
 function parseFav(v){return ['Y','YES','TRUE','1','최애'].includes(String(v??'').trim().toUpperCase());}
 function parseStatus(v){return String(v??'').includes('판매')?'sold':'held';}
+function pad2(n){return String(n).padStart(2,'0');}
+function formatYmd(y,m,d){return `${y}-${pad2(m)}-${pad2(d)}`;}
+function parseMoney(v){
+    if(v==null||v==='')return 0;
+    if(typeof v==='number'&&Number.isFinite(v))return v;
+    const n=Number(String(v).replace(/[,원₩\s]/g,''));
+    return Number.isFinite(n)?n:0;
+}
+function parseQty(v,fallback=1){
+    const n=Math.floor(Number(String(v??'').replace(/[,개\s]/g,'')));
+    return Number.isFinite(n)&&n>=1?n:fallback;
+}
+function rowValue(row,...keys){
+    if(!row)return '';
+    for(const key of keys){
+        if(row[key]!=null&&row[key]!=='')return row[key];
+    }
+    const normalized=Object.fromEntries(Object.entries(row).map(([k,val])=>[String(k).replace(/\s+/g,''),val]));
+    for(const key of keys){
+        const compact=String(key).replace(/\s+/g,'');
+        if(normalized[compact]!=null&&normalized[compact]!=='')return normalized[compact];
+    }
+    return '';
+}
 function excelDateToString(v){
-    if(!v)return'';
-    if(typeof v==='number'&&typeof XLSX!=='undefined'&&XLSX.SSF){const d=XLSX.SSF.parse_date_code(v);if(d)return`${d.y}-${String(d.m).padStart(2,'0')}-${String(d.d).padStart(2,'0')}`;}
+    if(v==null||v==='')return '';
+    if(v instanceof Date&&!isNaN(v.getTime())){
+        return formatYmd(v.getUTCFullYear(),v.getUTCMonth()+1,v.getUTCDate());
+    }
+    if(typeof v==='number'&&Number.isFinite(v)){
+        if(typeof XLSX!=='undefined'&&XLSX.SSF&&typeof XLSX.SSF.parse_date_code==='function'){
+            const parsed=XLSX.SSF.parse_date_code(v);
+            if(parsed&&parsed.y)return formatYmd(parsed.y,parsed.m,parsed.d);
+        }
+        const serial=Math.floor(v);
+        if(serial>=1&&serial<80000){
+            const d=new Date(Date.UTC(1899,11,30)+serial*86400000);
+            if(!isNaN(d.getTime()))return formatYmd(d.getUTCFullYear(),d.getUTCMonth()+1,d.getUTCDate());
+        }
+    }
     const s=String(v).trim().replace(/\./g,'-').replace(/\//g,'-');
-    const m=s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);return m?`${m[1]}-${m[2].padStart(2,'0')}-${m[3].padStart(2,'0')}`:s;
+    const m=s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+    return m?`${m[1]}-${m[2].padStart(2,'0')}-${m[3].padStart(2,'0')}`:'';
+}
+function findImportItem(rawItems,itemId,itemName){
+    if(itemId){
+        const byId=rawItems.find(item=>Number(item.id)===itemId);
+        if(byId)return byId;
+    }
+    if(!itemName)return null;
+    const matches=rawItems.filter(item=>item.name===itemName);
+    return matches.length?matches[0]:null;
 }
 function importExcel(event){
     const file=event.target.files?.[0];if(!file)return;
@@ -3369,7 +2250,7 @@ function importExcel(event){
     }
 
     const reader=new FileReader();
-    reader.onload=async e=>{
+    reader.onload=e=>{
         try{
             const wb=XLSX.read(e.target.result,{type:'array'});
             const collectionSheet=wb.Sheets['컬렉션']||wb.Sheets[wb.SheetNames[0]];
@@ -3377,23 +2258,26 @@ function importExcel(event){
 
             const rows=XLSX.utils.sheet_to_json(collectionSheet,{defval:''});
             const rawItems=rows
-                .filter(r=>String(r['아이템명']||'').trim())
+                .filter(r=>String(rowValue(r,'아이템명')||'').trim())
                 .map((r,i)=>{
-                    const quantity=Math.max(1,Math.floor(Number(r['등록수량']||r['수량']||1)));
-                    const legacyStatus=parseStatus(r['보유상태']);
+                    const quantity=parseQty(rowValue(r,'등록수량','수량'),1);
+                    const legacyStatus=parseStatus(rowValue(r,'보유상태'));
+                    const soldQty=Math.max(0,Math.floor(parseMoney(rowValue(r,'누적판매수량'))));
                     return {
-                        id:Number(r['아이템ID'])||Date.now()+i,
-                        name:String(r['아이템명']).trim(),
-                        series:String(r['시리즈']||'미분류').trim(),
+                        id:Number(rowValue(r,'아이템ID'))||Date.now()+i,
+                        name:String(rowValue(r,'아이템명')).trim(),
+                        series:String(rowValue(r,'시리즈')||'미분류').trim(),
                         quantity,
-                        acquired:excelDateToString(r['획득일']),
-                        purchasePrice:Number(r['구입금액(총액)']??r['구입금액']??0),
-                        location:String(r['구입위치']||'').trim(),
+                        acquired:excelDateToString(rowValue(r,'획득일')),
+                        purchasePrice:parseMoney(rowValue(r,'구입금액(총액)','구입금액')),
+                        location:String(rowValue(r,'구입위치')||'').trim(),
                         status:legacyStatus,
-                        soldDate:excelDateToString(r['판매일']),
-                        salePrice:Number(r['판매금액']||0),
-                        fav:parseFav(r['최애']),
-                        note:String(r['메모']||'').trim(),
+                        soldDate:excelDateToString(rowValue(r,'판매일')),
+                        salePrice:parseMoney(rowValue(r,'판매금액','누적판매금액')),
+                        soldQty,
+                        saleTotal:parseMoney(rowValue(r,'누적판매금액','판매금액')),
+                        fav:parseFav(rowValue(r,'최애')),
+                        note:String(rowValue(r,'메모')||'').trim(),
                         sales:[]
                     };
                 });
@@ -3402,18 +2286,15 @@ function importExcel(event){
             if(salesSheet){
                 const saleRows=XLSX.utils.sheet_to_json(salesSheet,{defval:''});
                 saleRows.forEach((r,i)=>{
-                    const itemId=Number(r['아이템ID']);
-                    const itemName=String(r['아이템명']||'').trim();
-                    const target=rawItems.find(item=>
-                        (itemId&&Number(item.id)===itemId) ||
-                        (!itemId&&itemName&&item.name===itemName)
-                    );
+                    const itemId=Number(rowValue(r,'아이템ID'))||0;
+                    const itemName=String(rowValue(r,'아이템명')||'').trim();
+                    const target=findImportItem(rawItems,itemId,itemName);
                     if(!target)return;
 
-                    const date=excelDateToString(r['판매일']);
-                    const quantity=Math.max(1,Math.floor(Number(r['판매수량']||1)));
-                    const amount=Number(r['판매금액(총액)']??r['판매금액']??0);
-                    const note=String(r['판매메모']||r['메모']||'').trim();
+                    const date=excelDateToString(rowValue(r,'판매일'));
+                    const quantity=parseQty(rowValue(r,'판매수량'),1);
+                    const amount=parseMoney(rowValue(r,'판매금액(총액)','판매금액'));
+                    const note=String(rowValue(r,'판매메모','메모')||'').trim();
                     if(date){
                         target.sales.push({
                             id:Date.now()+i+Math.floor(Math.random()*10000),
@@ -3424,43 +2305,55 @@ function importExcel(event){
                         });
                     }
                 });
-            }else{
-                // 구버전 엑셀은 판매일/판매금액 1건을 전량판매 이력으로 변환
-                rawItems.forEach(item=>{
-                    if(item.status==='sold'&&item.soldDate){
-                        item.sales=[{
-                            id:Date.now()+Math.floor(Math.random()*10000),
-                            date:item.soldDate,
-                            quantity:item.quantity,
-                            amount:Number(item.salePrice||0)
-                        }];
-                    }
-                });
             }
+
+            rawItems.forEach(item=>{
+                if(item.sales.length)return;
+
+                if(item.status==='sold'&&item.soldDate){
+                    item.sales=[{
+                        id:Date.now()+Math.floor(Math.random()*10000),
+                        date:item.soldDate,
+                        quantity:Math.max(1,Number(item.quantity||1)),
+                        amount:Number(item.salePrice||item.saleTotal||0),
+                        note:''
+                    }];
+                    return;
+                }
+
+                const soldQty=Math.max(0,Number(item.soldQty||0));
+                if(soldQty>0){
+                    item.sales=[{
+                        id:Date.now()+Math.floor(Math.random()*10000),
+                        date:item.soldDate||item.acquired||localTodayString(),
+                        quantity:soldQty,
+                        amount:Number(item.saleTotal||item.salePrice||0),
+                        note:''
+                    }];
+                }
+            });
 
             const imported=rawItems.map(normalizeItem);
 
             const seriesSheet=wb.Sheets['시리즈'];
             let importedSeries=seriesSheet
                 ? XLSX.utils.sheet_to_json(seriesSheet,{defval:''})
-                    .map(r=>String(r['시리즈명']||'').trim()).filter(Boolean)
+                    .map(r=>String(rowValue(r,'시리즈명')||'').trim()).filter(Boolean)
                 : [];
             if(!importedSeries.length)importedSeries=[...new Set(imported.map(p=>p.series).filter(Boolean))];
+            if(importedSeries.length)managedSeries=importedSeries;
 
-            let importedTitle=getAppTitle();
+            mockItems=imported;
+
             const settingsSheet=wb.Sheets['설정'];
             if(settingsSheet){
                 const settings=XLSX.utils.sheet_to_json(settingsSheet,{defval:''});
-                const titleRow=settings.find(r=>r['항목']==='앱 이름');
-                if(titleRow?.['값'])importedTitle=titleRow['값'];
+                const titleRow=settings.find(r=>rowValue(r,'항목')==='앱 이름');
+                if(titleRow&&rowValue(titleRow,'값'))document.querySelector('header .title').innerHTML=`🧸 ${escapeHtml(rowValue(titleRow,'값'))}`;
             }
 
-            const saved=await replaceImportedData({
-                items:imported,
-                series:importedSeries,
-                appTitle:importedTitle
-            });
-            if(saved)alert(`${mockItems.length}개의 컬렉션 데이터를 불러왔습니다.`);
+            saveState();renderAll();
+            alert(`${mockItems.length}개의 컬렉션 데이터를 불러왔습니다.`);
         }catch(err){
             console.error(err);
             alert('엑셀 파일을 읽지 못했습니다. Gachive에서 내려받은 형식인지 확인해주세요.');
@@ -3470,30 +2363,16 @@ function importExcel(event){
     reader.readAsArrayBuffer(file);
 }
 function exportData(){
-    const data={mockItems,managedSeries,seriesRecords,appTitle:getAppTitle(),appSettings};
+    const data={mockItems,managedSeries,appTitle:getAppTitle(),appSettings};
     const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`gachive-backup-${localTodayString()}.json`;document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
 }
 function importData(event){
     const file=event.target.files?.[0];if(!file)return;const reader=new FileReader();
-    reader.onload=async e=>{
-        try{
-            const data=JSON.parse(e.target.result);
-            const saved=await replaceImportedData({
-                items:Array.isArray(data.mockItems)?data.mockItems.map(normalizeItem):null,
-                series:Array.isArray(data.managedSeries)?data.managedSeries:null,
-                appTitle:data.appTitle||getAppTitle(),
-                appSettings:data.appSettings
-            });
-            if(saved)alert('데이터를 불러왔습니다.');
-        }catch(err){
-            alert('JSON 파일을 읽는 중 오류가 발생했습니다.');
-        }
-        event.target.value='';
-    };
+    reader.onload=e=>{try{const data=JSON.parse(e.target.result);if(Array.isArray(data.managedSeries)&&data.managedSeries.length)managedSeries=data.managedSeries;if(Array.isArray(data.mockItems))mockItems=data.mockItems.map(normalizeItem);if(data.appTitle)document.querySelector('header .title').innerHTML=`🧸 ${escapeHtml(data.appTitle)}`;if(data.appSettings&&typeof data.appSettings==='object')appSettings={showScrollTop:data.appSettings.showScrollTop!==false};saveState();renderAll();updateScrollTopButton();alert('데이터를 불러왔습니다.');}catch(err){alert('JSON 파일을 읽는 중 오류가 발생했습니다.');}event.target.value='';};
     reader.readAsText(file);
 }
 
-async function importJsonText(){
+function importJsonText(){
     const input=document.getElementById('json-text-input');
     const raw=(input?.value||'').trim();
 
@@ -3513,37 +2392,36 @@ async function importJsonText(){
             throw new Error('올바른 JSON 객체가 아닙니다.');
         }
 
-        if(!Array.isArray(data.mockItems)){
+        if(Array.isArray(data.managedSeries) && data.managedSeries.length){
+            managedSeries=data.managedSeries.slice();
+        }
+
+        if(Array.isArray(data.mockItems)){
+            mockItems=data.mockItems.map(normalizeItem);
+        }else{
             throw new Error('mockItems 데이터가 없습니다.');
         }
 
-        const saved=await replaceImportedData({
-            items:data.mockItems.map(normalizeItem),
-            series:Array.isArray(data.managedSeries)?data.managedSeries:null,
-            appTitle:data.appTitle||getAppTitle(),
-            appSettings:data.appSettings
-        });
-        if(saved){
-            input.value='';
-            alert(`${mockItems.length}개의 컬렉션 데이터를 불러왔습니다.`);
+        if(data.appTitle){
+            document.querySelector('header .title').innerHTML=`🧸 ${escapeHtml(data.appTitle)}`;
         }
+
+        if(data.appSettings&&typeof data.appSettings==='object'){
+            appSettings={showScrollTop:data.appSettings.showScrollTop!==false};
+        }
+
+        saveState();
+        renderAll();
+
+        input.value='';
+        alert(`${mockItems.length}개의 컬렉션 데이터를 불러왔습니다.`);
     }catch(err){
         console.error(err);
         alert('JSON 형식을 읽지 못했습니다. Gachive JSON 백업 내용을 그대로 붙여넣었는지 확인해주세요.');
     }
 }
 
-async function resetAllData(){
-    if(!confirm('현재 보관함 화면을 기본 예시 데이터로 바꿀까요? 다른 보관함 데이터는 그대로 둡니다.'))return;
-    const items=cloneSeedItems().map(item=>stampCreate(normalizeItem(item)));
-    const saved=await replaceImportedData({
-        items,
-        series:SEED_SERIES.slice(),
-        appTitle:DEFAULT_TITLE,
-        appSettings:{showScrollTop:true}
-    });
-    if(saved)alert('기본 데이터로 초기화되었습니다.');
-}
+function resetAllData(){if(!confirm('기본 예시 데이터로 초기화할까요?'))return;managedSeries=SEED_SERIES.slice();mockItems=cloneSeedItems().map(normalizeItem);appSettings={showScrollTop:true};document.querySelector('header .title').innerHTML=`🧸 ${DEFAULT_TITLE}`;saveState();renderAll();updateScrollTopButton();alert('기본 데이터로 초기화되었습니다.');}
 
 function renderAll(){
     renderSeriesControls();
@@ -3567,51 +2445,9 @@ function renderAll(){
     updateScrollTopButton();
 }
 function initApp(){
-    captureLegacyIfNeeded();
-    const status=getLegacyStatus();
-    pendingLegacyCopy=Boolean(hasLegacyOffer()&&!status.declined&&!status.migratedAt);
-
-    currentUser=localStorage.getItem(USER_KEY)||'';
-    currentSyncCode=localStorage.getItem(SYNC_CODE_KEY)||'';
-    const nameInput=document.getElementById('auth-name-input');
-    const codeInput=document.getElementById('auth-code-input');
-    if(nameInput&&currentUser)nameInput.value=currentUser;
-    if(codeInput&&currentSyncCode)codeInput.value=currentSyncCode;
-    applyCurrentUserToForm();
-
     loadState();
     renderAll();
-    updateLegacySettingsCard();
-    document.getElementById('calendar-nav-day').textContent=new Date().getDate();
-
-    document.getElementById('auth-code-input')?.addEventListener('keydown',event=>{
-        if(event.key==='Enter')submitAuth();
-    });
-    document.getElementById('auth-name-input')?.addEventListener('keydown',event=>{
-        if(event.key==='Enter')submitAuth();
-    });
-
-    const shouldOfferLegacy=hasLegacyOffer()&&!status.declined&&!status.migratedAt;
-    if(shouldOfferLegacy){
-        showLegacyPrompt();
-        return;
-    }
-
-    if(currentSyncCode&&currentUser&&hasEnv()){
-        const errorEl=document.getElementById('auth-error');
-        if(errorEl)errorEl.textContent='보관함을 준비하는 중…';
-        Promise.resolve(startSync()).finally(()=>{
-            hideAuth();
-            updateLegacySettingsCard();
-        });
-    }else{
-        showAuth();
-        showAuthForm();
-        if(!hasEnv()){
-            const errorEl=document.getElementById('auth-error');
-            if(errorEl)errorEl.textContent='Supabase 연결 정보가 없습니다. .env와 env.js를 확인해주세요.';
-        }
-    }
+	document.getElementById('calendar-nav-day').textContent = new Date().getDate();
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initApp);else initApp();
 </script>
