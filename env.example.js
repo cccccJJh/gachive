@@ -1,0 +1,4 @@
+window.GACHIVE_ENV = {
+  VITE_SUPABASE_URL: 'https://your-project.supabase.co',
+  VITE_SUPABASE_PUBLISHABLE_KEY: 'your-publishable-key'
+};
