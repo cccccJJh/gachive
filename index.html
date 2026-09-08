@@ -485,8 +485,8 @@ button.secondary{background:#8A84A8;}
         <div id="legacy-prompt" class="hidden">
             <p class="muted lead">이전 버전의 데이터가 발견되었습니다. 새 보관함으로 가져오시겠습니까?</p>
             <div class="legacy-actions">
-                <button type="button" onclick="chooseLegacyMigrate(true)">가져오기</button>
-                <button type="button" class="secondary" onclick="chooseLegacyMigrate(false)">나중에</button>
+                <button type="button" onclick="chooseLegacyMigrate(true)">예</button>
+                <button type="button" class="secondary" onclick="chooseLegacyMigrate(false)">아니오</button>
             </div>
         </div>
         <div id="auth-form">
@@ -932,6 +932,7 @@ let ledgerTypeFilter='all';
 let appSettings={showScrollTop:true};
 let currentUser='';
 let currentSyncCode='';
+let currentCodeHash='';
 let supabaseClient=null;
 let realtimeChannel=null;
 let syncReady=false;
@@ -1036,24 +1037,32 @@ function saveState(){
     try{localStorage.setItem(WORKSPACE_KEY,JSON.stringify({mockItems,managedSeries,seriesRecords,appTitle:getAppTitle(),appSettings}));}
     catch(e){console.warn('저장 실패:',e);}
 }
+function applyLoadedState(data){
+    managedSeries=Array.isArray(data.managedSeries)?data.managedSeries.slice():[];
+    mockItems=(Array.isArray(data.mockItems)?data.mockItems:[]).map(normalizeItem);
+    appSettings={
+        showScrollTop:data.appSettings?.showScrollTop!==false,
+        created_by:data.appSettings?.created_by||'',
+        created_at:data.appSettings?.created_at||'',
+        updated_by:data.appSettings?.updated_by||'',
+        updated_at:data.appSettings?.updated_at||'',
+        workspace_id:data.appSettings?.workspace_id||''
+    };
+    seriesRecords=Array.isArray(data.seriesRecords)?data.seriesRecords.map(normalizeSeriesRecord):[];
+    ensureSeriesRecords();
+    document.querySelector('header .title').innerHTML=`🧸 ${escapeHtml(data.appTitle||DEFAULT_TITLE)}`;
+}
 function loadState(){
     try{
-        const raw=localStorage.getItem(WORKSPACE_KEY);
-        if(raw){
-            const data=JSON.parse(raw);
-            managedSeries=Array.isArray(data.managedSeries)?data.managedSeries.slice():[];
-            mockItems=(Array.isArray(data.mockItems)?data.mockItems:[]).map(normalizeItem);
-            appSettings={
-                showScrollTop:data.appSettings?.showScrollTop!==false,
-                created_by:data.appSettings?.created_by||'',
-                created_at:data.appSettings?.created_at||'',
-                updated_by:data.appSettings?.updated_by||'',
-                updated_at:data.appSettings?.updated_at||'',
-                workspace_id:data.appSettings?.workspace_id||''
-            };
-            seriesRecords=Array.isArray(data.seriesRecords)?data.seriesRecords.map(normalizeSeriesRecord):[];
-            ensureSeriesRecords();
-            document.querySelector('header .title').innerHTML=`🧸 ${escapeHtml(data.appTitle||DEFAULT_TITLE)}`;
+        const workspace=parseStoredJson(localStorage.getItem(WORKSPACE_KEY));
+        const legacy=parseStoredJson(localStorage.getItem(STORAGE_KEY));
+        const declined=Boolean(getLegacyStatus().declined);
+        const importLegacy=pendingLegacyCopy||(!declined&&!getLegacyStatus().offered);
+        const data=legacyHasUserData(workspace)?workspace
+            :(importLegacy&&legacyHasUserData(legacy)?legacy
+            :(workspace||null));
+        if(data&&typeof data==='object'&&(Array.isArray(data.mockItems)||Array.isArray(data.managedSeries))){
+            applyLoadedState(data);
             return;
         }
     }catch(e){console.warn('불러오기 실패, 빈 보관함으로 시작합니다:',e);}
@@ -1070,8 +1079,35 @@ function getEnv(name){
 function envUrl(){return getEnv('VITE_SUPABASE_URL')||getEnv('SUPABASE_URL');}
 function envKey(){return getEnv('VITE_SUPABASE_PUBLISHABLE_KEY')||getEnv('SUPABASE_PUBLISHABLE_KEY')||getEnv('SUPABASE_ANON_KEY');}
 function hasEnv(){return Boolean(envUrl()&&envKey());}
-function isSyncEnabled(){return Boolean(supabaseClient&&syncReady&&currentSyncCode);}
+function isSyncEnabled(){return Boolean(supabaseClient&&syncReady&&currentSyncCode&&currentCodeHash);}
 function isValidSyncCode(code){return /^[a-z]{4,}$/.test(String(code||''));}
+async function hashCode(text){
+    if(!globalThis.crypto||!crypto.subtle){
+        throw Object.assign(new Error('이 브라우저에서는 보관함 코드를 해시할 수 없습니다. HTTPS 또는 localhost에서 열어주세요.'),{code:'HASH'});
+    }
+    const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode('gachive:'+text));
+    return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+async function ensureCodeHash(){
+    const code=String(currentSyncCode||'').trim();
+    currentSyncCode=code;
+    currentCodeHash=code?await hashCode(code):'';
+    return currentCodeHash;
+}
+function requireCodeHash(){
+    if(!currentCodeHash){
+        throw Object.assign(new Error('보관함 코드 해시가 준비되지 않았습니다.'),{code:'HASH'});
+    }
+    return currentCodeHash;
+}
+function bindRecordToVault(record){
+    const next=record&&typeof record==='object'?record:{};
+    delete next.sync_code;
+    delete next.syncCode;
+    next.workspace_id=currentCodeHash;
+    next.username=currentUser||next.username||'';
+    return next;
+}
 function isOnlySeedData(){
     if(mockItems.length!==SEED_ITEMS.length)return false;
     const seedById=new Map(SEED_ITEMS.map(item=>[item.id,item]));
@@ -1115,9 +1151,7 @@ function restoreState(snap){
 }
 function stampCreate(obj){
     const ts=nowIso();
-    obj.sync_code=currentSyncCode;
-    obj.workspace_id=currentSyncCode;
-    obj.username=currentUser;
+    bindRecordToVault(obj);
     obj.created_by=currentUser;
     obj.created_at=ts;
     obj.updated_by=currentUser;
@@ -1125,9 +1159,7 @@ function stampCreate(obj){
     return obj;
 }
 function stampUpdate(obj){
-    obj.sync_code=currentSyncCode;
-    obj.workspace_id=currentSyncCode;
-    obj.username=currentUser;
+    bindRecordToVault(obj);
     obj.updated_by=currentUser;
     obj.updated_at=nowIso();
     return obj;
@@ -1136,8 +1168,8 @@ function normalizeSeriesRecord(record){
     return {
         id:Number(record?.id)||Date.now()+Math.floor(Math.random()*10000),
         name:String(record?.name||''),
-        sync_code:String(record?.sync_code||currentSyncCode||''),
-        workspace_id:String(record?.workspace_id||currentSyncCode||''),
+        sync_code:'',
+        workspace_id:String(record?.workspace_id||currentCodeHash||''),
         username:String(record?.username||''),
         created_by:String(record?.created_by||''),
         created_at:record?.created_at||'',
@@ -1171,8 +1203,19 @@ function setSeriesFromNames(names,target){
     }
 }
 function belongsToCurrentVault(record){
+    const hash=String(record?.workspace_id||record?.code_hash||'').trim();
     const code=String(record?.sync_code||'').trim();
-    return !code||code===currentSyncCode;
+    if(!hash&&!code)return true;
+    if(currentCodeHash&&hash===currentCodeHash)return true;
+    if(currentSyncCode&&(code===currentSyncCode||hash===currentSyncCode))return true;
+    return false;
+}
+function missingColumnFromError(err){
+    const text=String(err?.message||err?.details||err?.hint||'');
+    const match=text.match(/Could not find the '([^']+)' column/i)
+        ||text.match(/column ["']?([a-zA-Z_]+)["']? of relation/i)
+        ||text.match(/column ["']?([a-zA-Z_]+)["']? does not exist/i);
+    return match?match[1]:'';
 }
 function classifySupabaseError(err){
     const code=String(err?.code||'');
@@ -1180,6 +1223,7 @@ function classifySupabaseError(err){
     if(code==='PGRST205')return 'table_not_in_cache';
     if(code==='42703')return 'missing_column';
     if(code==='42501'||code==='PGRST301')return 'rls';
+    if(code==='HASH')return 'hash';
     if(!hasEnv())return 'env';
     if(typeof navigator!=='undefined'&&navigator.onLine===false)return 'network';
     if(/Failed to fetch|NetworkError|fetch/i.test(String(err?.message||err||'')))return 'network';
@@ -1192,6 +1236,7 @@ function userErrorMessage(kind,err){
     if(kind==='rls')return '데이터 권한이 없어 보관함에 접근하지 못했습니다. Supabase RLS/권한 설정을 확인해주세요.';
     if(kind==='env')return 'Supabase 연결 정보가 없습니다. .env와 env.js의 Project URL, Publishable Key를 확인해주세요.';
     if(kind==='network')return '네트워크 연결을 확인한 뒤 다시 시도해주세요.';
+    if(kind==='hash')return err?.message||'보관함 코드를 해시하지 못했습니다.';
     return err?.message?`저장 또는 조회에 실패했습니다. ${err.message}`:'저장 또는 조회에 실패했습니다.';
 }
 function reportSupabaseError(err,tableName,operation,targetEl){
@@ -1223,7 +1268,7 @@ function updateSyncStatus(state,detail){
     const settingsEl=document.getElementById('sync-settings-status');
     const labels={
         idle:currentSyncCode?`${currentSyncCode} · ${currentUser||'로컬'}`:'',
-        connecting:currentSyncCode?`${currentSyncCode} · 불러오는 중`:'연결 중',
+        connecting:currentSyncCode?`${currentSyncCode} · 준비 중`:'연결 중',
         saving:'저장 중',
         synced:currentSyncCode?`${currentSyncCode} · ${currentUser||'연결됨'}`:'연결됨',
         reconnecting:'다시 연결 중…',
@@ -1271,6 +1316,12 @@ function restoreSessionKeys(prev){
     if(prev?.code)localStorage.setItem(SYNC_CODE_KEY,prev.code);
     else localStorage.removeItem(SYNC_CODE_KEY);
 }
+async function restoreSession(prev){
+    currentUser=prev?.user||'';
+    currentSyncCode=prev?.code||'';
+    restoreSessionKeys(prev);
+    currentCodeHash=currentSyncCode?await hashCode(currentSyncCode):'';
+}
 function clearEmptyVault(){
     mockItems=[];
     managedSeries=[];
@@ -1280,6 +1331,9 @@ function clearEmptyVault(){
 function parseStoredJson(raw){
     if(!raw)return null;
     try{return JSON.parse(raw);}catch(e){return null;}
+}
+function readLegacyStoredData(){
+    return getLegacySnapshot()?.data||parseStoredJson(localStorage.getItem(STORAGE_KEY));
 }
 function legacyHasUserData(data){
     if(!data||typeof data!=='object')return false;
@@ -1361,9 +1415,17 @@ function showMigrationResult(result){
     saveLegacyStatus({lastResult:result,migratedAt:result.verified?nowIso():getLegacyStatus().migratedAt||''});
     updateLegacySettingsCard();
 }
+function startEmptyWorkspacePreservingLegacy(){
+    clearEmptyVault();
+    appSettings={showScrollTop:true};
+    document.querySelector('header .title').innerHTML=`🧸 ${escapeHtml(DEFAULT_TITLE)}`;
+    saveState();
+    renderAll();
+}
 function chooseLegacyMigrate(yes){
     pendingLegacyCopy=Boolean(yes);
     saveLegacyStatus({declined:!yes,offered:true});
+    if(!yes)startEmptyWorkspacePreservingLegacy();
     const hasSession=isValidSyncCode(currentSyncCode)&&Boolean(currentUser);
     if(hasSession){
         document.getElementById('legacy-prompt')?.classList.add('hidden');
@@ -1393,9 +1455,7 @@ function chooseLegacyMigrate(yes){
 function stampMigratedRecord(record){
     const next=record&&typeof record==='object'?record:{};
     const ts=next.created_at||nowIso();
-    next.workspace_id=currentSyncCode;
-    next.username=currentUser;
-    next.sync_code=currentSyncCode;
+    bindRecordToVault(next);
     next.created_by=next.created_by||currentUser;
     next.created_at=ts;
     next.updated_by=currentUser;
@@ -1411,7 +1471,7 @@ function buildMigratedState(legacy){
         .map(record=>stampMigratedRecord(normalizeSeriesRecord(record)));
     const appSettings={
         showScrollTop:legacy?.appSettings?.showScrollTop!==false,
-        workspace_id:currentSyncCode,
+        workspace_id:currentCodeHash,
         username:currentUser
     };
     stampMigratedRecord(appSettings);
@@ -1437,7 +1497,7 @@ async function verifyMigratedState(expected){
     expected.items.forEach(item=>{
         const remote=remoteById.get(Number(item.id));
         const ok=remote
-            && String(remote.workspace_id||'')===currentSyncCode
+            && String(remote.workspace_id||'')===currentCodeHash
             && (String(remote.username||'')===currentUser||String(remote.created_by||'')===currentUser);
         if(ok)success+=1;
         else{
@@ -1462,8 +1522,7 @@ async function verifyMigratedState(expected){
     return {verified:fail===0,success,fail,details};
 }
 async function migrateLegacyToCurrentVault(){
-    const snapshot=getLegacySnapshot();
-    const legacy=snapshot?.data;
+    const legacy=readLegacyStoredData();
     if(!legacyHasUserData(legacy)){
         return {ok:false,verified:false,total:0,success:0,fail:0};
     }
@@ -1506,7 +1565,7 @@ async function migrateLegacyToCurrentVault(){
     }
 }
 async function retryLegacyMigration(){
-    if(!currentSyncCode||!currentUser||!syncReady){
+    if(!currentSyncCode||!currentCodeHash||!currentUser||!syncReady){
         pendingLegacyCopy=true;
         saveLegacyStatus({declined:false,offered:true});
         showAuth();
@@ -1528,19 +1587,23 @@ function deleteLegacyData(){
 }
 
 function payloadFromState(state){
+    const settings={...(state.appSettings||{})};
+    delete settings.sync_code;
+    settings.workspace_id=currentCodeHash;
+    settings.username=settings.username||currentUser;
     return {
         mockItems:(state.mockItems||[]).map(item=>{
-            const normalized=normalizeItem(item);
-            normalized.sync_code=normalized.sync_code||currentSyncCode;
-            normalized.workspace_id=normalized.workspace_id||currentSyncCode;
+            const normalized=bindRecordToVault(normalizeItem(item));
             normalized.username=normalized.username||currentUser;
+            normalized.created_by=normalized.created_by||currentUser;
+            normalized.updated_by=normalized.updated_by||currentUser;
             return normalized;
         }),
         managedSeries:state.managedSeries.slice(),
-        seriesRecords:(state.seriesRecords||[]).map(normalizeSeriesRecord),
+        seriesRecords:(state.seriesRecords||[]).map(record=>bindRecordToVault(normalizeSeriesRecord(record))),
         appTitle:state.appTitle,
-        appSettings:state.appSettings,
-        workspace_id:currentSyncCode
+        appSettings:settings,
+        workspace_id:currentCodeHash
     };
 }
 function applyPayload(payload,rowMeta){
@@ -1574,16 +1637,24 @@ function applyPayload(payload,rowMeta){
     updateScrollTopButton();
 }
 function vaultToRow(state){
+    const codeHash=requireCodeHash();
     const createdAt=state.vaultCreatedAt||state.appSettings?.created_at||nowIso();
     const createdBy=state.vaultCreatedBy||state.appSettings?.created_by||currentUser;
-    return {
-        sync_code:currentSyncCode,
+    const row={
+        code_hash:codeHash,
         payload:payloadFromState(state),
         created_by:createdBy,
         created_at:createdAt,
         updated_by:currentUser,
         updated_at:nowIso()
     };
+    if(!row.code_hash){
+        throw Object.assign(new Error('저장 payload에 code_hash가 없습니다.'),{code:'HASH'});
+    }
+    if('sync_code' in row){
+        delete row.sync_code;
+    }
+    return row;
 }
 
 function ensureClient(){
@@ -1597,37 +1668,135 @@ function ensureClient(){
 }
 
 async function fetchVaultRow(){
+    const codeHash=requireCodeHash();
     const {data,error}=await supabaseClient
         .from(SAVES_TABLE)
         .select('*')
-        .eq('sync_code',currentSyncCode)
+        .eq('code_hash',codeHash)
         .order('updated_at',{ascending:false})
         .limit(1);
     if(error)throw error;
     return Array.isArray(data)&&data.length?data[0]:null;
 }
 
+async function execVaultWrite(buildQuery, body){
+    const protectedCols=new Set(['code_hash','payload','updated_at']);
+    const next={...body};
+    delete next.sync_code;
+    for(let i=0;i<8;i++){
+        const {error}=await buildQuery(next);
+        if(!error)return;
+        const col=missingColumnFromError(error);
+        if(col&&!protectedCols.has(col)&&Object.prototype.hasOwnProperty.call(next,col)){
+            delete next[col];
+            continue;
+        }
+        throw error;
+    }
+}
+
 async function upsertVault(state){
     const row=vaultToRow(state);
+    if(!row.code_hash){
+        throw Object.assign(new Error('저장 payload에 code_hash가 없습니다.'),{code:'HASH'});
+    }
+    console.debug('gachive save payload',{
+        keys:Object.keys(row),
+        hasCodeHash:Boolean(row.code_hash),
+        codeHashLength:String(row.code_hash||'').length,
+        hasSyncCode:Object.prototype.hasOwnProperty.call(row,'sync_code'),
+        created_by:row.created_by,
+        updated_by:row.updated_by
+    });
     const existing=await fetchVaultRow();
     if(existing){
         if(existing.updated_at&&isNewerTimestamp(existing.updated_at,row.updated_at)){
             applyPayload(existing.payload,existing);
             throw Object.assign(new Error('다른 기기에서 더 최근 데이터가 저장되어 있습니다. 화면을 다시 불러왔습니다.'),{code:'CONFLICT'});
         }
-        const {error}=await supabaseClient
+        await execVaultWrite((body)=>supabaseClient
             .from(SAVES_TABLE)
-            .update({
-                payload:row.payload,
-                updated_by:row.updated_by,
-                updated_at:row.updated_at
-            })
-            .eq('sync_code',currentSyncCode);
-        if(error)throw error;
+            .update(body)
+            .eq('code_hash',row.code_hash),{
+            code_hash:row.code_hash,
+            payload:row.payload,
+            updated_by:row.updated_by,
+            updated_at:row.updated_at
+        });
         return;
     }
-    const {error}=await supabaseClient.from(SAVES_TABLE).insert(row);
-    if(error)throw error;
+    await execVaultWrite((body)=>supabaseClient.from(SAVES_TABLE).insert(body),row);
+}
+
+function stampStateForCurrentVault(state){
+    const next=JSON.parse(JSON.stringify(state||{}));
+    next.mockItems=(Array.isArray(next.mockItems)?next.mockItems:[]).map(item=>{
+        const normalized=normalizeItem(item);
+        if(!normalized.created_at)stampCreate(normalized);
+        else stampUpdate(normalized);
+        return normalized;
+    });
+    next.managedSeries=Array.isArray(next.managedSeries)?next.managedSeries.slice():[];
+    if(!next.managedSeries.length){
+        next.managedSeries=[...new Set(next.mockItems.map(item=>item.series).filter(Boolean))];
+    }
+    next.seriesRecords=(Array.isArray(next.seriesRecords)?next.seriesRecords:[]).map(record=>{
+        const normalized=normalizeSeriesRecord(record);
+        if(!normalized.created_at)stampCreate(normalized);
+        else stampUpdate(normalized);
+        return normalized;
+    });
+    setSeriesFromNames(next.managedSeries,next);
+    next.appSettings=next.appSettings&&typeof next.appSettings==='object'?{...next.appSettings}:{showScrollTop:true};
+    if(!next.appSettings.created_at)stampCreate(next.appSettings);
+    else stampUpdate(next.appSettings);
+    next.appTitle=next.appTitle||DEFAULT_TITLE;
+    next.vaultCreatedBy=next.vaultCreatedBy||next.appSettings.created_by||currentUser;
+    next.vaultCreatedAt=next.vaultCreatedAt||next.appSettings.created_at||nowIso();
+    return next;
+}
+function mergeVaultStates(base,extra){
+    const byId=new Map((base.mockItems||[]).map(item=>[Number(item.id),item]));
+    (extra.mockItems||[]).forEach(item=>{
+        const id=Number(item.id);
+        if(!byId.has(id))byId.set(id,item);
+    });
+    const names=[...new Set([...(base.managedSeries||[]),...(extra.managedSeries||[])])];
+    const merged={
+        mockItems:[...byId.values()],
+        managedSeries:names,
+        seriesRecords:[],
+        appSettings:{...(extra.appSettings||{}),...(base.appSettings||{})},
+        appTitle:base.appTitle||extra.appTitle||DEFAULT_TITLE,
+        vaultCreatedBy:base.vaultCreatedBy||extra.vaultCreatedBy||currentUser,
+        vaultCreatedAt:base.vaultCreatedAt||extra.vaultCreatedAt||nowIso()
+    };
+    setSeriesFromNames(names,merged);
+    return merged;
+}
+function collectLocalStateForNewVault(){
+    if(pendingLegacyCopy){
+        const legacy=readLegacyStoredData();
+        let state=(hasLocalUserData()||mockItems.length||managedSeries.length)?snapshotState():null;
+        if(legacyHasUserData(legacy)){
+            const migrated=buildMigratedState(legacy);
+            state=state?mergeVaultStates(stampStateForCurrentVault(state),migrated):migrated;
+        }
+        if(!state){
+            if(!appSettings.created_at)stampCreate(appSettings);
+            state=snapshotState();
+        }
+        return stampStateForCurrentVault(state);
+    }
+    if(!appSettings.created_at)stampCreate(appSettings);
+    return stampStateForCurrentVault(snapshotState());
+}
+async function createNewVault(){
+    const state=collectLocalStateForNewVault();
+    await upsertVault(state);
+    restoreState(state);
+    saveState();
+    renderAll();
 }
 
 async function commitChange(mutator,afterSuccess){
@@ -1691,17 +1860,21 @@ async function replaceImportedData({items,series,appTitle,appSettings:nextSettin
 }
 
 async function fetchRemoteAll(options={}){
-    if(!supabaseClient||!currentSyncCode||fetchingRemote)return false;
+    if(!supabaseClient||!currentCodeHash||fetchingRemote)return false;
     fetchingRemote=true;
     updateSyncStatus(wasRealtimeDisconnected?'reconnecting':'connecting');
     try{
         const row=await fetchVaultRow();
         if(!row){
-            if(!options.keepLocal){
+            if(options.createIfMissing){
+                await createNewVault();
+            }else if(!options.keepLocal){
                 clearEmptyVault();
                 saveState();
                 renderAll();
             }
+        }else if(pendingLegacyCopy&&!legacyHasUserData(row.payload)&&(hasLocalUserData()||legacyHasUserData(readLegacyStoredData()))){
+            await createNewVault();
         }else{
             applyPayload(row.payload,row);
             saveState();
@@ -1710,7 +1883,7 @@ async function fetchRemoteAll(options={}){
         updateSyncStatus('synced');
         return true;
     }catch(err){
-        reportSupabaseError(err,SAVES_TABLE,'fetch');
+        reportSupabaseError(err,SAVES_TABLE,options.createIfMissing?'save':'fetch');
         return false;
     }finally{
         fetchingRemote=false;
@@ -1719,8 +1892,8 @@ async function fetchRemoteAll(options={}){
 
 function handleVaultPayload(payload){
     const row=payload.new||payload.old||{};
-    const code=String(row.sync_code||row.payload?.sync_code||'').trim();
-    if(code&&code!==currentSyncCode)return;
+    const hash=String(row.code_hash||row.payload?.code_hash||row.payload?.workspace_id||'').trim();
+    if(!currentCodeHash||(hash&&hash!==currentCodeHash))return;
     if(payload.eventType==='DELETE'||!payload.new){
         clearEmptyVault();
         saveState();
@@ -1740,11 +1913,11 @@ function unsubscribeRealtime(){
     realtimeChannel=null;
 }
 function subscribeRealtime(){
-    if(!supabaseClient||!currentSyncCode)return;
+    if(!supabaseClient||!currentCodeHash)return;
     unsubscribeRealtime();
-    const filter=/^[A-Za-z0-9_-]+$/.test(currentSyncCode)?`sync_code=eq.${currentSyncCode}`:undefined;
+    const filter=/^[A-Za-z0-9_-]+$/.test(currentCodeHash)?`code_hash=eq.${currentCodeHash}`:undefined;
     const change=(event)=>({event,schema:'public',table:SAVES_TABLE,...(filter?{filter}:{})});
-    realtimeChannel=supabaseClient.channel(`gachive-sync-${currentSyncCode}`)
+    realtimeChannel=supabaseClient.channel(`gachive-sync-${currentCodeHash}`)
         .on('postgres_changes',change('INSERT'),handleVaultPayload)
         .on('postgres_changes',change('UPDATE'),handleVaultPayload)
         .on('postgres_changes',change('DELETE'),handleVaultPayload)
@@ -1791,11 +1964,21 @@ function bindSyncLifecycle(){
 }
 
 async function startSync(){
-    ensureClient();
+    try{
+        ensureClient();
+        await ensureCodeHash();
+        if(!currentCodeHash)throw Object.assign(new Error('보관함 코드 해시가 준비되지 않았습니다.'),{code:'HASH'});
+    }catch(err){
+        reportSupabaseError(err,SAVES_TABLE,'connect');
+        return false;
+    }
     bindSyncLifecycle();
     applyCurrentUserToForm();
     updateSyncStatus('connecting');
-    const ok=await fetchRemoteAll({keepLocal:true});
+    const ok=await fetchRemoteAll({
+        keepLocal:true,
+        createIfMissing:true
+    });
     if(ok){
         syncReady=true;
         subscribeRealtime();
@@ -1833,12 +2016,10 @@ async function submitAuth(){
     try{
         currentSyncCode=code;
         currentUser=name;
-        if(errorEl)errorEl.textContent='보관함을 불러오는 중…';
+        if(errorEl)errorEl.textContent='새 보관함을 준비하는 중…';
         const ok=await startSync();
         if(!ok){
-            currentUser=previousSession.user;
-            currentSyncCode=previousSession.code;
-            restoreSessionKeys(previousSession);
+            await restoreSession(previousSession);
             if(errorEl&&!errorEl.textContent)errorEl.textContent='보관함 연결에 실패했습니다. 이전 연결 정보는 그대로 둡니다.';
             return;
         }
@@ -1847,9 +2028,7 @@ async function submitAuth(){
             const result=await migrateLegacyToCurrentVault();
             showMigrationResult(result);
             if(!result.verified){
-                currentUser=previousSession.user;
-                currentSyncCode=previousSession.code;
-                restoreSessionKeys(previousSession);
+                await restoreSession(previousSession);
                 syncReady=false;
                 unsubscribeRealtime();
                 if(errorEl)errorEl.textContent='가져오기에 실패했습니다. 이전 데이터와 이전 연결 정보는 그대로 둡니다.';
@@ -1860,9 +2039,7 @@ async function submitAuth(){
         hideAuth();
         updateLegacySettingsCard();
     }catch(err){
-        currentUser=previousSession.user;
-        currentSyncCode=previousSession.code;
-        restoreSessionKeys(previousSession);
+        await restoreSession(previousSession);
         reportSupabaseError(err,SAVES_TABLE,'connect',errorEl);
     }finally{
         if(submitBtn)submitBtn.disabled=false;
@@ -1895,6 +2072,7 @@ async function switchVault(){
     unsubscribeRealtime();
     currentSyncCode=code;
     currentUser=name;
+    currentCodeHash='';
     persistSession();
     clearEmptyVault();
     appSettings={showScrollTop:appSettings.showScrollTop!==false};
@@ -1915,6 +2093,7 @@ function clearDeviceAuth(){
     unsubscribeRealtime();
     syncReady=false;
     currentSyncCode='';
+    currentCodeHash='';
     currentUser='';
     localStorage.removeItem(USER_KEY);
     localStorage.removeItem(SYNC_CODE_KEY);
@@ -3420,7 +3599,7 @@ function initApp(){
 
     if(currentSyncCode&&currentUser&&hasEnv()){
         const errorEl=document.getElementById('auth-error');
-        if(errorEl)errorEl.textContent='보관함을 불러오는 중…';
+        if(errorEl)errorEl.textContent='보관함을 준비하는 중…';
         Promise.resolve(startSync()).finally(()=>{
             hideAuth();
             updateLegacySettingsCard();
